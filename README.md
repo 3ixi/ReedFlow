@@ -9,58 +9,35 @@ ReedFlow是一个基于Python+FastAPI的自动化工作流管理系统，用户�
 - 丰富的内置模块：MD5加密、Base64编码/解码、查找/替换文本、URL编码/解码等
 - HTTP/HTTP2请求模块，支持API调用
 - JSON解析模块，自动提取数据
-- 通知服务支持（邮件、微信推送）
+- 通知服务支持（邮件、WxPusher推送、PushPlus）
 - 定时任务调度，支持Cron表达式
 - 变量存储和引用机制
-- 配置文件读写功能
+- 账号配置读写功能
 
 ## 技术栈
 
 - 后端：Python 3.8+, FastAPI, Jinja2, APScheduler
-- 前端：Tailwind CSS, JavaScript, jsPlumb
+- 前端：Tailwind CSS, JavaScript
 - 数据存储：JSON文件（无需数据库）
-
-## 内置模块
-
-ReedFlow提供以下内置模块：
-
-- **MD5加密**：将输入文本进行MD5加密
-- **Base64编码/解码**：进行Base64编码或解码
-- **查找/替换文本**：在文本中查找并替换指定内容
-- **URL编码/解码**：进行URL编码或解码
-- **请求URL**：发送HTTP请求到指定URL（支持HTTP2）
-- **解析JSON**：解析JSON字符串并提取数据
-- **设置变量**：设置一个变量的值
-- **文本模板**：创建一个包含变量的文本内容
-- **通知服务**：发送通知消息（支持邮件和wxpusher）
-- **配置文件操作**：读取或修改配置文件
 
 ## 安装与运行
 
 ### 环境要求
 
 - Python 3.8或更高版本
-- pip包管理器
 
 ### 安装步骤
 
-1. 克隆仓库或下载源码包
-
-```bash
-git clone https://github.com/yourusername/ReedFlow.git
-cd ReedFlow
-```
-
-2. 安装依赖包
+1. 安装依赖包
 
 ```bash
 pip install -r requirements.txt
 ```
 
-3. 运行应用
+2. 运行应用
 
 ```bash
-python main.py
+python run.py
 ```
 
 应用将在 `http://localhost:8000` 启动，默认管理密码为 `admin`
@@ -68,7 +45,7 @@ python main.py
 ## 使用说明
 
 1. 访问 `http://localhost:8000` 并使用管理密码登录
-2. 点击"新建工作流"按钮创建工作流
+2. 点击"新建"按钮创建工作流
 3. 从左侧拖拽模块到中间画布
 4. 点击模块进行配置
 5. 使用连接点连接各个模块，形成工作流
@@ -83,12 +60,6 @@ python main.py
 2. 在 `execute_module` 函数中添加对应的模块执行逻辑
 3. 重启应用即可使用新模块
 
-## 安全说明
+## 特别说明
 
-- 系统默认只支持一个管理账户，默认密码为 `admin`
-- 请在首次登录后立即在"系统设置"中修改管理密码
-- 本系统设计用于在可信网络环境中运行，不建议直接暴露在公网环境
-
-## 许可证
-
-本项目采用 MIT 许可证。详见 [LICENSE](LICENSE) 文件。 
+- 由于个人精力原因，部分模块功能没有开发完整，可能会出现报错，后续暂无修复计划，可以在`execute_module`函数中修改逻辑

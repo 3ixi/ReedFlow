@@ -1,0 +1,183 @@
+{% extends "base.html" %}
+
+{% block title %}登录 - ReedFlow{% endblock %}
+
+{% block head %}
+{{ super() }}
+<style>
+    @keyframes float {
+        0% { transform: translateY(0px); }
+        50% { transform: translateY(-10px); }
+        100% { transform: translateY(0px); }
+    }
+    
+    @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.8; }
+    }
+    
+    .floating-icon {
+        animation: float 6s ease-in-out infinite, pulse 4s ease-in-out infinite;
+    }
+    
+    body {
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .gradient-background {
+        background-image: 
+            radial-gradient(circle at 0% 0%, rgba(209, 213, 219, 0.1) 0%, transparent 30%),
+            radial-gradient(circle at 100% 0%, rgba(99, 102, 241, 0.15) 0%, transparent 40%),
+            radial-gradient(circle at 100% 100%, rgba(96, 165, 250, 0.1) 0%, transparent 30%),
+            radial-gradient(circle at 0% 100%, rgba(79, 70, 229, 0.15) 0%, transparent 40%);
+        background-color: #F9FAFB;
+        flex: 1;
+    }
+    
+    .card-shine {
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .card-shine::after {
+        content: "";
+        position: absolute;
+        top: -150%;
+        left: -50%;
+        width: 200%;
+        height: 200%;
+        background: linear-gradient(
+            to right,
+            rgba(255, 255, 255, 0) 0%,
+            rgba(255, 255, 255, 0.2) 50%,
+            rgba(255, 255, 255, 0) 100%
+        );
+        transform: rotate(30deg);
+        animation: shine 8s infinite;
+    }
+    
+    @keyframes shine {
+        0% {
+            transform: rotate(30deg) translateX(-200%);
+        }
+        20%, 100% {
+            transform: rotate(30deg) translateX(400%);
+        }
+    }
+    
+    .form-input:focus {
+        box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+    }
+    
+    /* 覆盖base.html中的样式 */
+    main {
+        padding: 0 !important;
+        margin: 0 !important;
+        flex: 1;
+        display: flex;
+    }
+    
+    .login-container {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="gradient-background w-full h-full flex items-center justify-center">
+    <div class="max-w-md w-full px-4">
+        <!-- 顶部标志和标题 -->
+        <div class="text-center mb-8">
+            <!-- <div class="inline-flex justify-center items-center w-20 h-20 rounded-full bg-gradient-to-br from-indigo-500 to-blue-400 shadow-lg mb-5 floating-icon">
+                <svg class="w-10 h-10 text-white" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M14.7071 9.29289C15.0976 9.68342 15.0976 10.3166 14.7071 10.7071L11.7071 13.7071C11.3166 14.0976 10.6834 14.0976 10.2929 13.7071L8.29289 11.7071C7.90237 11.3166 7.90237 10.6834 8.29289 10.2929C8.68342 9.90237 9.31658 9.90237 9.70711 10.2929L11 11.5858L13.2929 9.29289C13.6834 8.90237 14.3166 8.90237 14.7071 9.29289Z" fill="currentColor"/>
+                    <path d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12Z" fill="currentColor"/>
+                </svg>
+            </div> -->
+            <div class="inline-flex justify-center items-center w-20 h-20 rounded-full bg-gradient-to-br from-indigo-500 to-blue-400 shadow-lg mb-5 floating-icon">
+                <svg class="w-20 h-20" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+                  <!-- 背景圆形 -->
+                  <circle cx="50" cy="50" r="40" fill="url(#gradient-background)" />
+                  <!-- 中间圆圈（带渐变效果） -->
+                  <circle cx="50" cy="50" r="20" fill="url(#gradient-middle)" />
+                  <!-- 定义渐变 -->
+                  <defs>
+                    <!-- 背景渐变 -->
+                    <linearGradient id="gradient-background" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <stop offset="0%" style="stop-color: #4f46e5; stop-opacity: 1" />
+                      <stop offset="100%" style="stop-color: #3b82f6; stop-opacity: 1" />
+                    </linearGradient>
+                    <!-- 中间圆圈渐变 -->
+                    <linearGradient id="gradient-middle" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <stop offset="0%" style="stop-color: #ffffff; stop-opacity: 1" />
+                      <stop offset="100%" style="stop-color: #e0e0e0; stop-opacity: 1" />
+                    </linearGradient>
+                  </defs>
+                </svg>
+            </div>
+            
+            <h1 class="text-2xl sm:text-3xl font-extrabold tracking-tight text-gray-900">
+                <span class="inline-block bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 via-blue-500 to-indigo-400">
+                    ReedFlow
+                </span>
+            </h1>
+            <p class="mt-1 text-gray-500 text-sm">自动化工作流管理系统</p>
+        </div>
+        
+        <!-- 登录卡片 -->
+        <div class="card-shine bg-white shadow-xl rounded-2xl overflow-hidden border border-gray-100">
+            <div class="px-6 sm:px-8 pt-6 sm:pt-8 pb-5 sm:pb-6">
+                <div class="text-center mb-6">
+                    <h2 class="text-lg sm:text-xl font-bold text-gray-800">系统登录</h2>
+                    <p class="text-xs sm:text-sm text-gray-500 mt-1">请输入管理密码访问系统</p>
+                </div>
+                
+                <form action="/login" method="POST">
+                    <div class="mb-5">
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <svg class="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd" />
+                                </svg>
+                            </div>
+                            <input id="password" name="password" type="password" required 
+                                   class="form-input block w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition duration-200"
+                                   placeholder="请输入密码">
+                        </div>
+                    </div>
+                    
+                    <button type="submit" 
+                            class="w-full flex justify-center py-2.5 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-gradient-to-r from-indigo-600 to-blue-500 hover:from-indigo-700 hover:to-blue-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition duration-200 transform hover:-translate-y-0.5">
+                        <span class="inline-flex items-center">
+                            <svg class="mr-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M3 5a2 2 0 012-2h10a2 2 0 012 2v8a2 2 0 01-2 2h-2.22l.123.489.804.804A1 1 0 0113 18H7a1 1 0 01-.707-1.707l.804-.804L7.22 15H5a2 2 0 01-2-2V5zm5.771 7H5V5h10v7H8.771z" clip-rule="evenodd" />
+                            </svg>
+                            登录
+                        </span>
+                    </button>
+                </form>
+            </div>
+        </div>
+        
+        <!-- 底部版权信息 -->
+        <div class="mt-4 text-center">
+            <p class="text-xs text-gray-500">© 2025 ReedFlow - 版本 1.6.3</p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // 防止页面滚动
+    document.body.style.overflow = 'hidden';
+</script>
+{% endblock %} 

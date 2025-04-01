@@ -1,0 +1,19 @@
+admin_password: admin
+email:
+  smtp_server: smtp.qq.com
+  smtp_port: 465
+  smtp_user: 10000@qq.com
+  smtp_password: xxxxxx
+  sender: 10000@qq.com
+  default_recipient: 10001@qq.com
+wxpusher:
+  app_token: AT_XXXXXXXXX
+  default_uid: UID_XXXXXXXXX
+pushplus:
+  token: ''
+  topic: ''
+  default_receiver: ''
+log_level: DEBUG
+data_dir: ''
+log_max_entries: 1000
+notification_type: wxpusher

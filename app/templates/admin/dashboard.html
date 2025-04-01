@@ -1,0 +1,725 @@
+{% extends "base.html" %}
+
+{% block title %}工作流管理 - ReedFlow{% endblock %}
+
+{% block content %}
+<div class="mb-6 flex flex-wrap justify-between items-center">
+    <h1> </h1>
+    <div class="flex flex-wrap gap-2 w-full sm:w-auto">
+        <button onclick="openCronGenerator()" class="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+            <i class="bi bi-clock mr-2"></i> Cron生成
+        </button>
+        
+        <label for="importWorkflow" class="cursor-pointer inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+            <i class="bi bi-upload mr-2"></i> 导入
+        </label>
+        <input type="file" id="importWorkflow" accept=".rfj" class="hidden" onchange="importWorkflowFile(this)">
+        
+        <a href="/admin/workflow/new" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+            <i class="bi bi-plus-circle mr-2"></i> 新建
+        </a>
+    </div>
+</div>
+
+{% if workflows|length == 0 %}
+<div class="bg-white rounded-lg shadow p-6 text-center">
+    <p class="text-gray-500 mb-4">暂无工作流，请点击上方"新建"按钮创建</p>
+    <img src="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/icons/diagram-3.svg" class="w-16 h-16 mx-auto text-gray-400">
+</div>
+{% else %}
+<!-- 桌面设备 - 表格视图 -->
+<div class="hidden md:block">
+    <div class="bg-white shadow overflow-hidden rounded-lg">
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">名称</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">状态</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">创建时间</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">最后运行</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">下次运行</th>
+                    <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">操作</th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+                {% for workflow in workflows %}
+                <tr>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="text-sm font-medium text-gray-900">{{ workflow.name }}</div>
+                        <div class="text-sm text-gray-500 truncate max-w-xs">{{ workflow.description }}</div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full {{ 'bg-green-100 text-green-800' if workflow.enabled else 'bg-gray-100 text-gray-800' }}">
+                            {{ '启用' if workflow.enabled else '禁用' }}
+                        </span>
+                        {% if workflow.has_warning %}
+                        <span class="ml-2 px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800">
+                            警告
+                        </span>
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {{ workflow.created_at.split('T')[0] if workflow.created_at else '-' }}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {{ workflow.last_run if workflow.last_run else '从未运行' }}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {{ workflow.next_run if workflow.next_run else '未设置调度' }}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <div class="flex justify-end space-x-2">
+                            <button onclick="runWorkflow('{{ workflow.id }}')" class="text-indigo-600 hover:text-indigo-900" title="运行">
+                                <i class="bi bi-play-circle"></i>
+                            </button>
+                            <a href="/admin/workflow/{{ workflow.id }}" class="text-indigo-600 hover:text-indigo-900" title="编辑">
+                                <i class="bi bi-pencil-square"></i>
+                            </a>
+                            <a href="/admin/workflow/export/{{ workflow.id }}" class="text-indigo-600 hover:text-indigo-900" title="导出">
+                                <i class="bi bi-download"></i>
+                            </a>
+                            <a href="/admin/logs?type=workflow&workflow_id={{ workflow.id }}&level=" class="text-indigo-600 hover:text-indigo-900" title="日志">
+                                <i class="bi bi-journal-text"></i>
+                            </a>
+                            <button onclick="toggleWorkflow('{{ workflow.id }}', {{ 'false' if workflow.enabled else 'true' }})" class="text-indigo-600 hover:text-indigo-900" title="{{ '禁用' if workflow.enabled else '启用' }}">
+                                <i class="bi {{ 'bi-toggle-on' if workflow.enabled else 'bi-toggle-off' }}"></i>
+                            </button>
+                            <button onclick="openAlertSettings('{{ workflow.id }}', '{{ workflow.name }}', {{ workflow.retry_count|default(0) }}, {{ workflow.retry_interval|default(5) }})" class="text-yellow-600 hover:text-yellow-900" title="预警设置">
+                                <i class="bi bi-exclamation-triangle"></i>
+                            </button>
+                            <button onclick="deleteWorkflow('{{ workflow.id }}', '{{ workflow.name }}')" class="text-red-600 hover:text-red-900" title="删除">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- 移动设备 - 卡片列表 -->
+<div class="block md:hidden space-y-4">
+    {% for workflow in workflows %}
+    <div class="bg-white shadow rounded-lg mb-4 p-4">
+        <div class="flex justify-between items-start">
+            <div>
+                <h3 class="text-lg font-medium text-gray-900">{{ workflow.name }}</h3>
+                <p class="text-sm text-gray-500 mt-1">{{ workflow.description }}</p>
+            </div>
+            <div class="flex flex-col items-end">
+                <span class="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full {{ 'bg-green-100 text-green-800' if workflow.enabled else 'bg-gray-100 text-gray-800' }}">
+                    {{ '启用' if workflow.enabled else '禁用' }}
+                </span>
+                {% if workflow.has_warning %}
+                <span class="mt-1 px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800">
+                    警告
+                </span>
+                {% endif %}
+            </div>
+        </div>
+        <div class="mt-3 flex flex-col text-sm space-y-2">
+            <div>
+                <span class="text-gray-500">创建时间:</span>
+                <span>{{ workflow.created_at.split('T')[0] if workflow.created_at else '-' }}</span>
+            </div>
+            <div>
+                <span class="text-gray-500">最后运行:</span>
+                <span>{{ workflow.last_run if workflow.last_run else '从未运行' }}</span>
+            </div>
+            <div>
+                <span class="text-gray-500">下次运行:</span>
+                <span>{{ workflow.next_run if workflow.next_run else '未设置调度' }}</span>
+            </div>
+        </div>
+        <div class="mt-4 grid grid-cols-3 gap-2 border-t pt-4">
+            <button onclick="runWorkflow('{{ workflow.id }}')" class="text-indigo-600 hover:text-indigo-900 flex items-center justify-center">
+                <i class="bi bi-play-circle mr-1"></i> 运行
+            </button>
+            <a href="/admin/workflow/{{ workflow.id }}" class="text-indigo-600 hover:text-indigo-900 flex items-center justify-center">
+                <i class="bi bi-pencil-square mr-1"></i> 编辑
+            </a>
+            <a href="/admin/workflow/export/{{ workflow.id }}" class="text-indigo-600 hover:text-indigo-900 flex items-center justify-center">
+                <i class="bi bi-download mr-1"></i> 导出
+            </a>
+            <a href="/admin/logs?type=workflow&workflow_id={{ workflow.id }}&level=" class="text-indigo-600 hover:text-indigo-900 flex items-center justify-center">
+                <i class="bi bi-journal-text mr-1"></i> 日志
+            </a>
+            <button onclick="toggleWorkflow('{{ workflow.id }}', {{ 'false' if workflow.enabled else 'true' }})" class="text-indigo-600 hover:text-indigo-900 flex items-center justify-center">
+                <i class="bi {{ 'bi-toggle-on' if workflow.enabled else 'bi-toggle-off' }} mr-1"></i> {{ '禁用' if workflow.enabled else '启用' }}
+            </button>
+            <button onclick="openAlertSettings('{{ workflow.id }}', '{{ workflow.name }}', {{ workflow.retry_count|default(0) }}, {{ workflow.retry_interval|default(5) }})" class="text-yellow-600 hover:text-yellow-900 flex items-center justify-center">
+                <i class="bi bi-exclamation-triangle mr-1"></i> 预警
+            </button>
+            <button onclick="deleteWorkflow('{{ workflow.id }}', '{{ workflow.name }}')" class="text-red-600 hover:text-red-900 flex items-center justify-center col-span-3">
+                <i class="bi bi-trash mr-1"></i> 删除
+            </button>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<!-- 预警设置模态框 -->
+<div id="alertSettingsModal" class="fixed inset-0 flex items-center justify-center z-50 hidden">
+    <div class="absolute inset-0 bg-black opacity-50"></div>
+    <div class="bg-white rounded-lg p-6 w-full max-w-md z-10 relative">
+        <h3 class="text-lg font-medium text-gray-900 mb-4" id="alertSettingsTitle">工作流预警设置</h3>
+        <form id="alertSettingsForm">
+            <input type="hidden" id="workflowId" name="workflowId">
+            
+            <div class="mb-4">
+                <label for="retryCount" class="block text-sm font-medium text-gray-700 mb-1">失败重试次数</label>
+                <input type="number" id="retryCount" name="retryCount" min="0" max="10" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                <p class="mt-1 text-sm text-gray-500">设置为0表示不重试</p>
+            </div>
+            
+            <div class="mb-4">
+                <label for="retryInterval" class="block text-sm font-medium text-gray-700 mb-1">重试间隔（分钟）</label>
+                <input type="number" id="retryInterval" name="retryInterval" min="1" max="60" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+            </div>
+            
+            <div class="mt-6 flex justify-end space-x-3">
+                <button type="button" onclick="closeAlertSettings()" class="px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                    取消
+                </button>
+                <button type="button" onclick="saveAlertSettings()" class="px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                    保存
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Cron表达式生成器模态框 -->
+<div id="cronGeneratorModal" class="fixed inset-0 flex items-center justify-center z-50 hidden">
+    <div class="absolute inset-0 bg-black opacity-50"></div>
+    <div class="bg-white rounded-lg p-4 w-full max-w-3xl z-10 relative max-h-[85vh] overflow-y-auto m-4">
+        <div class="flex justify-between items-center mb-3 sticky top-0 bg-white pb-3 border-b z-10">
+            <h3 class="text-lg font-medium text-gray-900">Cron表达式生成器</h3>
+            <button onclick="closeCronGenerator()" class="text-gray-400 hover:text-gray-500">
+                <i class="bi bi-x-lg"></i>
+            </button>
+        </div>
+        
+        <div class="mb-4">
+            <!-- <p class="text-sm text-gray-500 mb-2">Cron表达式由5个字段组成，按顺序分别是：分钟、小时、日、月、星期</p> -->
+            <div class="bg-gradient-to-r from-indigo-50 to-blue-50 p-3 rounded-lg border border-indigo-100">
+                <p id="cronExpression" class="font-mono text-lg text-center font-medium text-indigo-700 select-all">* * * * *</p>
+            </div>
+        </div>
+        
+        <!-- 常用表达式 -->
+        <div class="mb-4">
+            <h4 class="text-sm font-medium text-gray-900 mb-2">常用表达式</h4>
+            <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                <button type="button" onclick="setPreset('每小时')" class="px-3 py-1.5 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors">
+                    每小时
+                </button>
+                <button type="button" onclick="setPreset('每天凌晨')" class="px-3 py-1.5 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors">
+                    每天凌晨
+                </button>
+                <button type="button" onclick="setPreset('每周一上午10点')" class="px-3 py-1.5 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors">
+                    每周一上午10点
+                </button>
+            </div>
+        </div>
+        
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <!-- 分钟选择 -->
+            <div class="bg-white p-3 rounded-lg border border-gray-200">
+                <h4 class="text-sm font-medium text-gray-900 mb-2">分钟</h4>
+                <div class="space-y-2">
+                    <label class="flex items-center">
+                        <input type="radio" name="minuteOption" value="every" checked class="h-4 w-4 text-indigo-600 focus:ring-indigo-500">
+                        <span class="ml-2 text-sm text-gray-700">每分钟</span>
+                    </label>
+                    <div>
+                        <label class="flex items-center">
+                            <input type="radio" name="minuteOption" value="interval" class="h-4 w-4 text-indigo-600 focus:ring-indigo-500">
+                            <span class="ml-2 text-sm text-gray-700">每隔</span>
+                            <input type="number" id="minuteInterval" min="1" max="59" value="5" class="ml-2 w-14 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 text-sm">
+                            <span class="ml-1 text-sm text-gray-700">分钟</span>
+                        </label>
+                    </div>
+                    <div>
+                        <label class="flex items-center">
+                            <input type="radio" name="minuteOption" value="specific" class="h-4 w-4 text-indigo-600 focus:ring-indigo-500">
+                            <span class="ml-2 text-sm text-gray-700">指定</span>
+                        </label>
+                        <input type="text" id="minuteSpecific" placeholder="0,15,30,45" class="mt-1.5 w-full border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 text-sm">
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 小时选择 -->
+            <div class="bg-white p-3 rounded-lg border border-gray-200">
+                <h4 class="text-sm font-medium text-gray-900 mb-2">小时</h4>
+                <div class="space-y-2">
+                    <label class="flex items-center">
+                        <input type="radio" name="hourOption" value="every" checked class="h-4 w-4 text-indigo-600 focus:ring-indigo-500">
+                        <span class="ml-2 text-sm text-gray-700">每小时</span>
+                    </label>
+                    <div>
+                        <label class="flex items-center">
+                            <input type="radio" name="hourOption" value="interval" class="h-4 w-4 text-indigo-600 focus:ring-indigo-500">
+                            <span class="ml-2 text-sm text-gray-700">每隔</span>
+                            <input type="number" id="hourInterval" min="1" max="23" value="2" class="ml-2 w-14 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 text-sm">
+                            <span class="ml-1 text-sm text-gray-700">小时</span>
+                        </label>
+                    </div>
+                    <div>
+                        <label class="flex items-center">
+                            <input type="radio" name="hourOption" value="specific" class="h-4 w-4 text-indigo-600 focus:ring-indigo-500">
+                            <span class="ml-2 text-sm text-gray-700">指定</span>
+                        </label>
+                        <input type="text" id="hourSpecific" placeholder="9,12,18" class="mt-1.5 w-full border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 text-sm">
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 日期选择 -->
+            <div class="bg-white p-3 rounded-lg border border-gray-200">
+                <h4 class="text-sm font-medium text-gray-900 mb-2">日期</h4>
+                <div class="space-y-2">
+                    <label class="flex items-center">
+                        <input type="radio" name="dayOption" value="every" checked class="h-4 w-4 text-indigo-600 focus:ring-indigo-500">
+                        <span class="ml-2 text-sm text-gray-700">每天</span>
+                    </label>
+                    <div>
+                        <label class="flex items-center">
+                            <input type="radio" name="dayOption" value="specific" class="h-4 w-4 text-indigo-600 focus:ring-indigo-500">
+                            <span class="ml-2 text-sm text-gray-700">指定日期</span>
+                        </label>
+                        <input type="text" id="daySpecific" placeholder="1,15" class="mt-1.5 w-full border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 text-sm">
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 月份选择 -->
+            <div class="bg-white p-3 rounded-lg border border-gray-200">
+                <h4 class="text-sm font-medium text-gray-900 mb-2">月份</h4>
+                <div class="space-y-2">
+                    <label class="flex items-center">
+                        <input type="radio" name="monthOption" value="every" checked class="h-4 w-4 text-indigo-600 focus:ring-indigo-500">
+                        <span class="ml-2 text-sm text-gray-700">每月</span>
+                    </label>
+                    <div>
+                        <label class="flex items-center">
+                            <input type="radio" name="monthOption" value="specific" class="h-4 w-4 text-indigo-600 focus:ring-indigo-500">
+                            <span class="ml-2 text-sm text-gray-700">指定月份</span>
+                        </label>
+                        <input type="text" id="monthSpecific" placeholder="1,6,12" class="mt-1.5 w-full border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 text-sm">
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 星期选择 -->
+            <div class="bg-white p-3 rounded-lg border border-gray-200 sm:col-span-2 lg:col-span-1">
+                <h4 class="text-sm font-medium text-gray-900 mb-2">星期</h4>
+                <div class="space-y-2">
+                    <label class="flex items-center">
+                        <input type="radio" name="weekOption" value="every" checked class="h-4 w-4 text-indigo-600 focus:ring-indigo-500">
+                        <span class="ml-2 text-sm text-gray-700">每天</span>
+                    </label>
+                    <div>
+                        <label class="flex items-center">
+                            <input type="radio" name="weekOption" value="specific" class="h-4 w-4 text-indigo-600 focus:ring-indigo-500">
+                            <span class="ml-2 text-sm text-gray-700">指定星期</span>
+                        </label>
+                        <div class="mt-1.5 grid grid-cols-4 gap-2">
+                            <label class="inline-flex items-center">
+                                <input type="checkbox" name="weekday" value="1" class="h-4 w-4 text-indigo-600 focus:ring-indigo-500">
+                                <span class="ml-1.5 text-sm text-gray-700">一</span>
+                            </label>
+                            <label class="inline-flex items-center">
+                                <input type="checkbox" name="weekday" value="2" class="h-4 w-4 text-indigo-600 focus:ring-indigo-500">
+                                <span class="ml-1.5 text-sm text-gray-700">二</span>
+                            </label>
+                            <label class="inline-flex items-center">
+                                <input type="checkbox" name="weekday" value="3" class="h-4 w-4 text-indigo-600 focus:ring-indigo-500">
+                                <span class="ml-1.5 text-sm text-gray-700">三</span>
+                            </label>
+                            <label class="inline-flex items-center">
+                                <input type="checkbox" name="weekday" value="4" class="h-4 w-4 text-indigo-600 focus:ring-indigo-500">
+                                <span class="ml-1.5 text-sm text-gray-700">四</span>
+                            </label>
+                            <label class="inline-flex items-center">
+                                <input type="checkbox" name="weekday" value="5" class="h-4 w-4 text-indigo-600 focus:ring-indigo-500">
+                                <span class="ml-1.5 text-sm text-gray-700">五</span>
+                            </label>
+                            <label class="inline-flex items-center">
+                                <input type="checkbox" name="weekday" value="6" class="h-4 w-4 text-indigo-600 focus:ring-indigo-500">
+                                <span class="ml-1.5 text-sm text-gray-700">六</span>
+                            </label>
+                            <label class="inline-flex items-center">
+                                <input type="checkbox" name="weekday" value="0" class="h-4 w-4 text-indigo-600 focus:ring-indigo-500">
+                                <span class="ml-1.5 text-sm text-gray-700">日</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="mt-4 flex justify-end space-x-3 sticky bottom-0 bg-white pt-3 border-t">
+            <button type="button" onclick="closeCronGenerator()" class="px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors">
+                取消
+            </button>
+            <button type="button" onclick="copyCronExpression()" class="px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors">
+                复制表达式
+            </button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // 导入工作流文件
+    async function importWorkflowFile(input) {
+        if (!input.files || input.files.length === 0) return;
+        
+        const file = input.files[0];
+        
+        // 检查文件扩展名
+        if (!file.name.toLowerCase().endsWith('.rfj')) {
+            showToast("只能导入.rfj格式的工作流文件", "error");
+            input.value = '';
+            return;
+        }
+        
+        // 创建FormData对象
+        const formData = new FormData();
+        formData.append('file', file);
+        
+        try {
+            const response = await fetch('/admin/workflow/import', {
+                method: 'POST',
+                body: formData
+            });
+            
+            const result = await response.json();
+            
+            if (response.ok) {
+                showToast(result.message, "success");
+                // 导入成功后重新加载页面
+                setTimeout(() => window.location.reload(), 1000);
+            } else {
+                showToast(result.message || "导入失败", "error");
+            }
+        } catch (error) {
+            showToast("导入请求出错", "error");
+            console.error(error);
+        }
+        
+        // 清空文件输入框，以便可以重复导入相同文件
+        input.value = '';
+    }
+    
+    // 运行工作流
+    async function runWorkflow(id) {
+        try {
+            const response = await fetch(`/api/workflows/${id}/run`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+            
+            const data = await response.json();
+            
+            if (response.ok) {
+                showToast("工作流已触发执行", "success");
+            } else {
+                showToast(data.message || "工作流执行失败", "error");
+            }
+        } catch (error) {
+            showToast("请求出错", "error");
+            console.error(error);
+        }
+    }
+    
+    // 切换工作流状态
+    async function toggleWorkflow(id, enabled) {
+        try {
+            const response = await fetch(`/admin/workflow/${id}/toggle`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ enabled })
+            });
+            
+            const data = await response.json();
+            
+            if (response.ok) {
+                showToast(data.message, "success");
+                setTimeout(() => window.location.reload(), 1000);
+            } else {
+                showToast(data.message || "操作失败", "error");
+            }
+        } catch (error) {
+            showToast("请求出错", "error");
+            console.error(error);
+        }
+    }
+    
+    // 删除工作流
+    async function deleteWorkflow(id, name) {
+        if (!confirm(`确定要删除工作流"${name}"吗？此操作不可撤销。`)) {
+            return;
+        }
+        
+        try {
+            const response = await fetch(`/admin/workflow/${id}`, {
+                method: 'DELETE'
+            });
+            
+            const data = await response.json();
+            
+            if (response.ok) {
+                showToast(data.message, "success");
+                setTimeout(() => window.location.reload(), 1000);
+            } else {
+                showToast(data.message || "删除失败", "error");
+            }
+        } catch (error) {
+            showToast("请求出错", "error");
+            console.error(error);
+        }
+    }
+    
+    // 打开预警设置模态框
+    function openAlertSettings(id, name, retryCount, retryInterval) {
+        document.getElementById('alertSettingsTitle').textContent = `预警设置 - ${name}`;
+        document.getElementById('workflowId').value = id;
+        document.getElementById('retryCount').value = retryCount || 0;
+        document.getElementById('retryInterval').value = retryInterval || 5;
+        
+        document.getElementById('alertSettingsModal').classList.remove('hidden');
+    }
+    
+    // 关闭预警设置模态框
+    function closeAlertSettings() {
+        document.getElementById('alertSettingsModal').classList.add('hidden');
+    }
+    
+    // 保存预警设置
+    async function saveAlertSettings() {
+        const workflowId = document.getElementById('workflowId').value;
+        const retryCount = parseInt(document.getElementById('retryCount').value) || 0;
+        const retryInterval = parseInt(document.getElementById('retryInterval').value) || 5;
+        
+        // 验证重试间隔在1-60之间
+        const validatedInterval = Math.min(Math.max(retryInterval, 1), 60);
+        if (retryInterval !== validatedInterval) {
+            document.getElementById('retryInterval').value = validatedInterval;
+        }
+        
+        try {
+            const response = await fetch(`/admin/workflow/${workflowId}/alert-settings`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ 
+                    retry_count: retryCount,
+                    retry_interval: validatedInterval
+                })
+            });
+            
+            const data = await response.json();
+            
+            if (response.ok) {
+                showToast(data.message || "预警设置已保存", "success");
+                closeAlertSettings();
+                
+                // 页面刷新以更新设置状态
+                setTimeout(() => window.location.reload(), 1000);
+            } else {
+                showToast(data.message || "保存预警设置失败", "error");
+            }
+        } catch (error) {
+            showToast("请求出错", "error");
+            console.error(error);
+        }
+    }
+    
+    // 在模态框中点击背景关闭
+    document.getElementById('alertSettingsModal').addEventListener('click', function(e) {
+        if (e.target === this) {
+            closeAlertSettings();
+        }
+    });
+
+    // Cron表达式生成器
+    function openCronGenerator() {
+        document.getElementById('cronGeneratorModal').classList.remove('hidden');
+        updateCronExpression();
+    }
+
+    function closeCronGenerator() {
+        document.getElementById('cronGeneratorModal').classList.add('hidden');
+    }
+
+    function updateCronExpression() {
+        // 获取分钟部分
+        let minute = "*";
+        const minuteOption = document.querySelector('input[name="minuteOption"]:checked').value;
+        if (minuteOption === 'interval') {
+            const interval = document.getElementById('minuteInterval').value;
+            minute = `*/${interval}`;
+        } else if (minuteOption === 'specific') {
+            const specific = document.getElementById('minuteSpecific').value.trim();
+            if (specific) minute = specific;
+        }
+
+        // 获取小时部分
+        let hour = "*";
+        const hourOption = document.querySelector('input[name="hourOption"]:checked').value;
+        if (hourOption === 'interval') {
+            const interval = document.getElementById('hourInterval').value;
+            hour = `*/${interval}`;
+        } else if (hourOption === 'specific') {
+            const specific = document.getElementById('hourSpecific').value.trim();
+            if (specific) hour = specific;
+        }
+
+        // 获取日期部分
+        let day = "*";
+        const dayOption = document.querySelector('input[name="dayOption"]:checked').value;
+        if (dayOption === 'specific') {
+            const specific = document.getElementById('daySpecific').value.trim();
+            if (specific) day = specific;
+        }
+
+        // 获取月份部分
+        let month = "*";
+        const monthOption = document.querySelector('input[name="monthOption"]:checked').value;
+        if (monthOption === 'specific') {
+            const specific = document.getElementById('monthSpecific').value.trim();
+            if (specific) month = specific;
+        }
+
+        // 获取星期部分
+        let week = "*";
+        const weekOption = document.querySelector('input[name="weekOption"]:checked').value;
+        if (weekOption === 'specific') {
+            const weekdayCheckboxes = document.querySelectorAll('input[name="weekday"]:checked');
+            if (weekdayCheckboxes.length > 0) {
+                const weekdays = Array.from(weekdayCheckboxes).map(cb => cb.value).join(',');
+                week = weekdays;
+            }
+        }
+
+        // 更新表达式显示
+        document.getElementById('cronExpression').textContent = `${minute} ${hour} ${day} ${month} ${week}`;
+    }
+
+    function setPreset(preset) {
+        // 重置所有选项
+        document.querySelectorAll('input[type="radio"][value="every"]').forEach(radio => {
+            radio.checked = true;
+        });
+        
+        document.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
+            checkbox.checked = false;
+        });
+
+        // 根据预设设置选项
+        switch(preset) {
+            case '每分钟':
+                // 默认已经是每分钟
+                break;
+            case '每小时':
+                document.querySelector('input[name="minuteOption"][value="specific"]').checked = true;
+                document.getElementById('minuteSpecific').value = '0';
+                break;
+            case '每天凌晨':
+                document.querySelector('input[name="minuteOption"][value="specific"]').checked = true;
+                document.getElementById('minuteSpecific').value = '0';
+                document.querySelector('input[name="hourOption"][value="specific"]').checked = true;
+                document.getElementById('hourSpecific').value = '0';
+                break;
+            case '每天上午8点':
+                document.querySelector('input[name="minuteOption"][value="specific"]').checked = true;
+                document.getElementById('minuteSpecific').value = '0';
+                document.querySelector('input[name="hourOption"][value="specific"]').checked = true;
+                document.getElementById('hourSpecific').value = '8';
+                break;
+            case '每天晚上8点':
+                document.querySelector('input[name="minuteOption"][value="specific"]').checked = true;
+                document.getElementById('minuteSpecific').value = '0';
+                document.querySelector('input[name="hourOption"][value="specific"]').checked = true;
+                document.getElementById('hourSpecific').value = '20';
+                break;
+            case '每周一上午10点':
+                document.querySelector('input[name="minuteOption"][value="specific"]').checked = true;
+                document.getElementById('minuteSpecific').value = '0';
+                document.querySelector('input[name="hourOption"][value="specific"]').checked = true;
+                document.getElementById('hourSpecific').value = '10';
+                document.querySelector('input[name="weekOption"][value="specific"]').checked = true;
+                document.querySelector('input[name="weekday"][value="1"]').checked = true;
+                break;
+        }
+        updateCronExpression();
+    }
+
+    function copyCronExpression() {
+        const cronExpression = document.getElementById('cronExpression').textContent;
+        navigator.clipboard.writeText(cronExpression).then(() => {
+            // 显示复制成功的提示
+            const button = document.querySelector('button[onclick="copyCronExpression()"]');
+            const originalText = button.textContent;
+            button.textContent = '已复制!';
+            button.classList.remove('bg-indigo-600', 'hover:bg-indigo-700');
+            button.classList.add('bg-green-600', 'hover:bg-green-700');
+            
+            setTimeout(() => {
+                button.textContent = originalText;
+                button.classList.remove('bg-green-600', 'hover:bg-green-700');
+                button.classList.add('bg-indigo-600', 'hover:bg-indigo-700');
+            }, 2000);
+        });
+    }
+
+    // 添加事件监听器
+    document.addEventListener('DOMContentLoaded', function() {
+        // 分钟选项变化
+        document.querySelectorAll('input[name="minuteOption"]').forEach(radio => {
+            radio.addEventListener('change', updateCronExpression);
+        });
+        document.getElementById('minuteInterval').addEventListener('input', updateCronExpression);
+        document.getElementById('minuteSpecific').addEventListener('input', updateCronExpression);
+        
+        // 小时选项变化
+        document.querySelectorAll('input[name="hourOption"]').forEach(radio => {
+            radio.addEventListener('change', updateCronExpression);
+        });
+        document.getElementById('hourInterval').addEventListener('input', updateCronExpression);
+        document.getElementById('hourSpecific').addEventListener('input', updateCronExpression);
+        
+        // 日期选项变化
+        document.querySelectorAll('input[name="dayOption"]').forEach(radio => {
+            radio.addEventListener('change', updateCronExpression);
+        });
+        document.getElementById('daySpecific').addEventListener('input', updateCronExpression);
+        
+        // 月份选项变化
+        document.querySelectorAll('input[name="monthOption"]').forEach(radio => {
+            radio.addEventListener('change', updateCronExpression);
+        });
+        document.getElementById('monthSpecific').addEventListener('input', updateCronExpression);
+        
+        // 星期选项变化
+        document.querySelectorAll('input[name="weekOption"]').forEach(radio => {
+            radio.addEventListener('change', updateCronExpression);
+        });
+        document.querySelectorAll('input[name="weekday"]').forEach(checkbox => {
+            checkbox.addEventListener('change', updateCronExpression);
+        });
+    });
+</script>
+{% endblock %} 

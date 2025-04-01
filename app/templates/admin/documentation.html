@@ -1,0 +1,1258 @@
+{% extends "base.html" %}
+
+{% block title %}使用文档 - ReedFlow{% endblock %}
+
+{% block head %}
+{{ super() }}
+<style>
+    .doc-container {
+        display: grid;
+        grid-template-columns: 280px 1fr;
+        min-height: calc(100vh - 64px);
+        background-color: #ffffff;
+    }
+    
+    .doc-sidebar {
+        position: sticky;
+        top: 0;
+        height: calc(100vh - 64px);
+        overflow-y: auto;
+        background-color: #ffffff;
+        border-right: 1px solid #e5e7eb;
+        padding: 1.5rem;
+        transition: transform 0.3s ease-in-out;
+        z-index: 40;
+    }
+    
+    .doc-content {
+        padding: 2rem;
+        max-width: 1200px;
+        margin: 0 auto;
+        background-color: #ffffff;
+    }
+    
+    .doc-header {
+        margin-bottom: 2rem;
+        padding-bottom: 1rem;
+        border-bottom: 1px solid #e5e7eb;
+    }
+    
+    .doc-nav-item {
+        padding: 0.75rem;
+        font-size: 0.875rem;
+        color: #4b5563;
+        display: block;
+        border-radius: 0.375rem;
+        transition: all 0.2s;
+        margin-bottom: 0.25rem;
+    }
+    
+    .doc-nav-item:hover {
+        color: #4f46e5;
+        background-color: #f5f7ff;
+    }
+    
+    .doc-nav-item.active {
+        color: #4f46e5;
+        font-weight: 500;
+        background-color: #f5f7ff;
+    }
+    
+    .doc-nav-heading {
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: #6b7280;
+        margin-top: 1.5rem;
+        margin-bottom: 0.75rem;
+        padding-left: 0.75rem;
+    }
+    
+    .doc-section {
+        margin-bottom: 3rem;
+        scroll-margin-top: 2rem;
+        background-color: #ffffff;
+    }
+    
+    .doc-section-title {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #111827;
+        margin-bottom: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.5rem 0;
+        border-bottom: 2px solid #f5f7ff;
+    }
+    
+    .doc-section-title::before {
+        content: '';
+        display: block;
+        width: 0.25rem;
+        height: 1.5rem;
+        background-color: #4f46e5;
+        border-radius: 0.125rem;
+    }
+    
+    .doc-category-card {
+        border-radius: 0.5rem;
+        padding: 1.25rem;
+        margin-bottom: 1rem;
+        background-color: #ffffff;
+        border: 1px solid #e5e7eb;
+        box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+        transition: all 0.3s;
+    }
+    
+    .doc-category-card:hover {
+        transform: translateY(-2px);
+        border-color: #4f46e5;
+        box-shadow: 0 4px 6px -1px rgba(79, 70, 229, 0.1);
+    }
+    
+    .doc-category-text {
+        border-radius: 0.5rem;
+        padding: 1.25rem;
+        background-color: #f8fafc;
+        margin-bottom: 1.5rem;
+        border: 1px solid #e5e7eb;
+    }
+    
+    .doc-category-text p:last-child {
+        margin-bottom: 0;
+    }
+    
+    .doc-module-card {
+        border: 1px solid #e5e7eb;
+        border-radius: 0.5rem;
+        padding: 1.25rem;
+        margin-bottom: 1rem;
+        background-color: #ffffff;
+        transition: all 0.2s;
+    }
+    
+    .doc-module-card:hover {
+        border-color: #4f46e5;
+        box-shadow: 0 4px 6px -1px rgba(79, 70, 229, 0.1);
+    }
+    
+    .doc-module-title {
+        font-size: 1rem;
+        font-weight: 600;
+        color: #4f46e5;
+        margin-bottom: 0.5rem;
+    }
+    
+    .doc-example {
+        background-color: #f8fafc;
+        border-radius: 0.375rem;
+        padding: 1rem;
+        font-size: 0.875rem;
+        margin-top: 0.5rem;
+        border: 1px solid #e5e7eb;
+    }
+    
+    /* 移动端导航按钮 */
+    .doc-mobile-nav-button {
+        display: none;
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        background-color: #4f46e5;
+        color: white;
+        align-items: center;
+        justify-content: center;
+        z-index: 50;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        border: none;
+        cursor: pointer;
+    }
+    
+    /* 媒体查询 */
+    @media (max-width: 1024px) {
+        .doc-container {
+            grid-template-columns: 1fr;
+        }
+        
+        .doc-sidebar {
+            position: fixed;
+            left: 0;
+            top: 0;
+            width: 280px;
+            height: 100%;
+            transform: translateX(-100%);
+            box-shadow: 4px 0 10px rgba(0, 0, 0, 0.1);
+            z-index: 100;
+            transition: transform 0.3s ease;
+            overscroll-behavior: contain;
+        }
+        
+        .doc-sidebar.active {
+            transform: translateX(0);
+            display: block;
+        }
+        
+        body.sidebar-active {
+            overflow: hidden;
+        }
+        
+        .doc-mobile-nav-button {
+            display: flex;
+        }
+        
+        .doc-content {
+            padding: 1.5rem 1rem;
+        }
+        
+        .doc-section-title {
+            font-size: 1.25rem;
+        }
+    }
+    
+    @media (max-width: 640px) {
+        .doc-content {
+            padding: 1rem 0.75rem;
+        }
+        
+        .doc-category-text {
+            padding: 1rem;
+        }
+        
+        .doc-module-card {
+            padding: 1rem;
+        }
+        
+        .doc-example {
+            padding: 0.75rem;
+            font-size: 0.8125rem;
+        }
+        
+        .doc-category-card {
+            padding: 1rem;
+        }
+    }
+    
+    /* 移动端覆盖层 */
+    .doc-overlay {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: rgba(0, 0, 0, 0.5);
+        z-index: 90;
+        -webkit-tap-highlight-color: transparent;
+    }
+    
+    .doc-overlay.active {
+        display: block;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="doc-container">
+    <!-- 侧边导航 -->
+    <aside class="doc-sidebar" id="docSidebar">
+        <div class="mb-6">
+            <div class="text-sm text-gray-500">ReedFlow 1.6.3</div>
+            <h3 class="text-lg font-bold text-gray-900">使用文档</h3>
+        </div>
+        
+        <nav>
+            <a href="#introduction" class="doc-nav-item">
+                <i class="bi bi-info-circle mr-2"></i> 系统介绍
+            </a>
+            <a href="#workflow-create" class="doc-nav-item">
+                <i class="bi bi-diagram-3 mr-2"></i> 创建工作流
+            </a>
+            
+            <div class="doc-nav-heading">模块类别</div>
+            <a href="#module-categories" class="doc-nav-item">
+                <i class="bi bi-grid-3x3-gap mr-2"></i> 模块分类概述
+            </a>
+            <a href="#text-modules" class="doc-nav-item">
+                <i class="bi bi-text-paragraph mr-2"></i> 文本操作模块
+            </a>
+            <a href="#network-modules" class="doc-nav-item">
+                <i class="bi bi-globe mr-2"></i> 网络请求模块
+            </a>
+            <a href="#data-modules" class="doc-nav-item">
+                <i class="bi bi-database mr-2"></i> 数据处理模块
+            </a>
+            <a href="#config-modules" class="doc-nav-item">
+                <i class="bi bi-gear mr-2"></i> 脚本配置模块
+            </a>
+            
+            <div class="doc-nav-heading">模块详解</div>
+            <a href="#text-encryption" class="doc-nav-item">
+                <i class="bi bi-key mr-2"></i> 加密解密
+            </a>
+            <a href="#text-conversion" class="doc-nav-item">
+                <i class="bi bi-translate mr-2"></i> 编码转换
+            </a>
+            <a href="#text-processing" class="doc-nav-item">
+                <i class="bi bi-pencil-square mr-2"></i> 文本处理
+            </a>
+            <a href="#http-request" class="doc-nav-item">
+                <i class="bi bi-arrow-repeat mr-2"></i> 请求URL
+            </a>
+            <a href="#domain-check" class="doc-nav-item">
+                <i class="bi bi-globe-americas mr-2"></i> 检查域名
+            </a>
+            <a href="#json-parse" class="doc-nav-item">
+                <i class="bi bi-braces mr-2"></i> 解析JSON
+            </a>
+            <a href="#variable-modules" class="doc-nav-item">
+                <i class="bi bi-tag mr-2"></i> 变量操作
+            </a>
+            <a href="#calculation" class="doc-nav-item">
+                <i class="bi bi-calculator mr-2"></i> 计算
+            </a>
+            <a href="#number-format" class="doc-nav-item">
+                <i class="bi bi-123 mr-2"></i> 数字类型
+            </a>
+            <a href="#notification-modules" class="doc-nav-item">
+                <i class="bi bi-bell mr-2"></i> 通知服务
+            </a>
+            <a href="#condition-modules" class="doc-nav-item">
+                <i class="bi bi-signpost-split mr-2"></i> 条件判断
+            </a>
+            <!-- <a href="#repeat-modules" class="doc-nav-item">
+                <i class="bi bi-arrow-repeat mr-2"></i> 重复操作
+            </a> -->
+            <a href="#system-proxy" class="doc-nav-item">
+                <i class="bi bi-ethernet mr-2"></i> 系统代理
+            </a>
+            <a href="#random-number" class="doc-nav-item">
+                <i class="bi bi-shuffle mr-2"></i> 随机数
+            </a>
+            <a href="#timestamp" class="doc-nav-item">
+                <i class="bi bi-calendar-date mr-2"></i> 时间戳
+            </a>
+            
+            <div class="doc-nav-heading">高级功能</div>
+            <a href="#import-export" class="doc-nav-item">
+                <i class="bi bi-arrow-down-up mr-2"></i> 导入导出
+            </a>
+            <a href="#best-practices" class="doc-nav-item">
+                <i class="bi bi-trophy mr-2"></i> 使用建议
+            </a>
+        </nav>
+    </aside>
+
+    <!-- 主内容区 -->
+    <div class="doc-content">
+        <div class="doc-header">
+            <h2 class="text-2xl font-bold text-gray-900">系统功能概览</h2>
+            <p class="text-gray-500 mt-2">本文档旨在帮助用户全面了解ReedFlow系统的各项功能及其使用方法</p>
+        </div>
+        
+        <!-- 系统介绍 -->
+        <section id="introduction" class="doc-section">
+            <h2 class="doc-section-title">系统介绍</h2>
+            <div class="doc-category-text">
+                <p class="mb-4">ReedFlow是一个功能强大的自动化工作流管理系统，允许用户通过拖拽方式创建和管理各种自动化工作流程。无需编写代码，即可实现文本处理、网络请求、条件判断、通知服务等多种功能。</p>
+                <p class="mb-4">系统主要特点：</p>
+                <ul class="list-disc pl-6 mb-4 space-y-2">
+                    <li>直观的可视化编辑器，支持拖拽操作</li>
+                    <li>丰富的模块类型，包含文本处理、网络请求、条件判断等</li>
+                    <li>支持变量引用，使用[variable]格式在各模块间传递数据</li>
+                    <li>定时任务，支持使用cron表达式设置执行计划</li>
+                    <li>导入导出功能，便于备份和迁移工作流</li>
+                    <li>详细的执行日志，方便追踪工作流运行情况</li>
+                </ul>
+            </div>
+        </section>
+
+        <!-- 创建工作流 -->
+        <section id="workflow-create" class="doc-section">
+            <h2 class="doc-section-title">创建工作流</h2>
+            <div class="doc-category-text">
+                <p class="mb-4">创建工作流的步骤：</p>
+                <ol class="list-decimal pl-6 mb-4 space-y-2">
+                    <li>在"工作流"页面，点击"新建工作流"按钮</li>
+                    <li>填写工作流名称和描述</li>
+                    <li>从右侧模块列表中选择需要的模块，拖拽到中央画布</li>
+                    <li>连接模块：点击一个模块的输出点，拖动到另一个模块的输入点</li>
+                    <li>配置每个模块：点击模块，在右侧面板中设置相关参数</li>
+                    <li>设置定时任务（可选）：如需定时执行，在工作流设置中配置cron表达式</li>
+                    <li>点击"保存"按钮保存工作流</li>
+                </ol>
+                <div class="bg-yellow-50 p-4 rounded-lg mb-4 border-l-4 border-yellow-400">
+                    <h4 class="font-medium text-yellow-800 mb-2">注意事项：</h4>
+                    <ul class="list-disc pl-6 space-y-1 text-yellow-700">
+                        <li>模块间的连接代表执行顺序和数据流向</li>
+                        <li>请确保工作流没有断开的连接</li>
+                        <li>变量引用格式为[variable]，可在模块间传递数据</li>
+                        <li>保存前请检查配置是否完整</li>
+                    </ul>
+                </div>
+                <p>工作流创建后，可以在"工作流"页面查看和管理所有工作流，包括启用/禁用、手动触发、编辑和删除操作。</p>
+            </div>
+        </section>
+
+        <!-- 模块分类 -->
+        <section id="module-categories" class="doc-section">
+            <h2 class="doc-section-title">模块分类</h2>
+            <p class="mb-6">ReedFlow系统中的模块按功能分为三大类：</p>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                <div class="doc-category-card bg-indigo-50 border-l-indigo-500">
+                    <div class="flex items-center mb-3">
+                        <i class="bi bi-text-paragraph text-2xl text-indigo-600 mr-3"></i>
+                        <h3 class="font-semibold text-indigo-800">文本操作模块</h3>
+                    </div>
+                    <p class="text-indigo-700">处理各种文本内容，包括加密、编码、替换等文本处理功能</p>
+                </div>
+                <div class="doc-category-card bg-green-50 border-l-green-500">
+                    <div class="flex items-center mb-3">
+                        <i class="bi bi-globe text-2xl text-green-600 mr-3"></i>
+                        <h3 class="font-semibold text-green-800">网络请求模块</h3>
+                    </div>
+                    <p class="text-green-700">发送HTTP请求和处理响应数据，如请求URL、解析JSON等</p>
+                </div>
+                <div class="doc-category-card bg-amber-50 border-l-amber-500">
+                    <div class="flex items-center mb-3">
+                        <i class="bi bi-gear text-2xl text-amber-600 mr-3"></i>
+                        <h3 class="font-semibold text-amber-800">脚本配置模块</h3>
+                    </div>
+                    <p class="text-amber-700">控制工作流程的执行逻辑，如变量设置、条件判断、重复操作等</p>
+                </div>
+            </div>
+            
+            <p>在创建工作流时，您可以根据需要从不同类别中选择合适的模块，组合在一起实现复杂的自动化任务。</p>
+        </section>
+
+        <!-- 文本操作模块 -->
+        <section id="text-modules" class="doc-section">
+            <h2 class="doc-section-title">文本操作模块</h2>
+            <div class="doc-category-text">
+                <p class="mb-4">文本操作模块用于处理各种文本内容，包括加密、编码转换和文本处理。</p>
+                
+                <div id="text-encryption" class="mb-6">
+                    <h3 class="doc-module-title">4.1 加密解密</h3>
+                    
+                    <div class="space-y-4">
+                        <div class="doc-module-card">
+                            <h4 class="doc-module-title">MD5加密</h4>
+                            <p class="mb-2">将输入文本进行MD5加密，生成32位的哈希值。</p>
+                            <div class="doc-example">
+                                <p><strong>输入示例：</strong> Hello World 或 [my_variable]</p>
+                                <p><strong>输出示例：</strong> b10a8db164e0754105b7a99be72e3fe5</p>
+                            </div>
+                        </div>
+                        
+                        <div class="doc-module-card">
+                            <h4 class="doc-module-title">AES加密</h4>
+                            <p class="mb-2">使用AES算法对文本进行加密，支持ECB和CBC两种模式，输出格式可选Base64或Hex。</p>
+                            <div class="doc-example">
+                                <p><strong>密钥处理：</strong> 自动调整密钥为16/24/32位</p>
+                                <p><strong>初始向量：</strong> CBC模式下可设置初始向量(IV)，为空时使用全零IV</p>
+                                <p><strong>使用场景：</strong> 加密敏感数据，如API密钥、个人信息等</p>
+                            </div>
+                        </div>
+                        
+                        <div class="doc-module-card">
+                            <h4 class="doc-module-title">AES解密</h4>
+                            <p class="mb-2">使用AES算法对加密文本进行解密，需与加密时使用相同的密钥、模式和初始向量。</p>
+                            <div class="doc-example">
+                                <p><strong>注意事项：</strong> 解密需要与加密时使用相同的配置，包括：</p>
+                                <ul class="list-disc pl-4 mt-1">
+                                    <li>相同的密钥</li>
+                                    <li>相同的加密模式(ECB/CBC)</li>
+                                    <li>CBC模式下相同的IV</li>
+                                    <li>相同的编码方式(Base64/Hex)</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div id="text-conversion" class="mb-6">
+                    <h3 class="doc-module-title">4.2 编码转换</h3>
+                    
+                    <div class="space-y-4">
+                        <div class="doc-module-card">
+                            <h4 class="doc-module-title">Base64编码</h4>
+                            <p class="mb-2">将文本转换为Base64编码格式，常用于处理二进制数据。</p>
+                            <div class="doc-example">
+                                <p><strong>输入示例：</strong> Hello World</p>
+                                <p><strong>输出示例：</strong> SGVsbG8gV29ybGQ=</p>
+                            </div>
+                        </div>
+                        
+                        <div class="doc-module-card">
+                            <h4 class="doc-module-title">Base64解码</h4>
+                            <p class="mb-2">将Base64编码的文本转换回原始文本。</p>
+                            <div class="doc-example">
+                                <p><strong>输入示例：</strong> SGVsbG8gV29ybGQ=</p>
+                                <p><strong>输出示例：</strong> Hello World</p>
+                            </div>
+                        </div>
+                        
+                        <div class="doc-module-card">
+                            <h4 class="doc-module-title">URL编码</h4>
+                            <p class="mb-2">将文本转换为URL安全的格式，替换特殊字符。</p>
+                            <div class="doc-example">
+                                <p><strong>输入示例：</strong> Hello World!</p>
+                                <p><strong>输出示例：</strong> Hello%20World%21</p>
+                            </div>
+                        </div>
+                        
+                        <div class="doc-module-card">
+                            <h4 class="doc-module-title">URL解码</h4>
+                            <p class="mb-2">将URL编码的文本转换回原始文本。</p>
+                            <div class="doc-example">
+                                <p><strong>输入示例：</strong> Hello%20World%21</p>
+                                <p><strong>输出示例：</strong> Hello World!</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div id="text-processing" class="mb-6">
+                    <h3 class="doc-module-title">4.3 文本处理</h3>
+                    
+                    <div class="space-y-4">
+                        <div class="doc-module-card">
+                            <h4 class="doc-module-title">查找/替换文本</h4>
+                            <p class="mb-2">在文本中查找并替换指定内容。</p>
+                            <div class="doc-example">
+                                <p><strong>使用场景：</strong> 格式化文本、清理数据、修正内容</p>
+                            </div>
+                        </div>
+                        
+                        <div class="doc-module-card">
+                            <h4 class="doc-module-title">文本模板</h4>
+                            <p class="mb-2">创建一个包含变量的文本内容，可用于生成报告、邮件内容等。</p>
+                            <div class="doc-example">
+                                <p><strong>模板示例：</strong> 您好，[name]。您的账户余额为[balance]元。</p>
+                                <p><strong>替换后：</strong> 您好，张三。您的账户余额为100元。</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 网络请求模块 -->
+        <section id="network-modules" class="doc-section">
+            <h2 class="doc-section-title">网络请求模块</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div class="doc-category-card border-blue-500 bg-blue-50">
+                    <div class="flex items-center mb-2">
+                        <i class="bi bi-globe text-blue-600 text-xl mr-2"></i>
+                        <h3 class="font-semibold text-blue-800">请求URL</h3>
+                    </div>
+                    <p class="text-sm text-blue-700">发送HTTP请求到指定URL，支持多种方法和自定义参数。</p>
+                </div>
+                
+                <div class="doc-category-card border-green-500 bg-green-50">
+                    <div class="flex items-center mb-2">
+                        <i class="bi bi-link text-green-600 text-xl mr-2"></i>
+                        <h3 class="font-semibold text-green-800">URL编码</h3>
+                    </div>
+                    <p class="text-sm text-green-700">将文本进行URL编码，适用于构建URL参数。</p>
+                </div>
+                
+                <div class="doc-category-card border-green-500 bg-green-50">
+                    <div class="flex items-center mb-2">
+                        <i class="bi bi-link-45deg text-green-600 text-xl mr-2"></i>
+                        <h3 class="font-semibold text-green-800">URL解码</h3>
+                    </div>
+                    <p class="text-sm text-green-700">将URL编码的文本解码为原始内容。</p>
+                </div>
+                
+                <div class="doc-category-card border-purple-500 bg-purple-50">
+                    <div class="flex items-center mb-2">
+                        <i class="bi bi-ethernet text-purple-600 text-xl mr-2"></i>
+                        <h3 class="font-semibold text-purple-800">系统代理</h3>
+                    </div>
+                    <p class="text-sm text-purple-700">设置HTTP代理，影响后续网络请求的路由方式。</p>
+                </div>
+            </div>
+            <div class="doc-category-text">
+                <p class="mb-4">网络请求模块用于与外部API和服务进行交互，获取和处理数据。</p>
+                
+                <div id="http-request" class="mb-6">
+                    <h3 class="doc-module-title">5.1 请求URL</h3>
+                    <p class="mb-4">发送HTTP请求到指定URL，支持GET、POST、PUT、DELETE等方法。</p>
+                    
+                    <div class="doc-module-card">
+                        <h4 class="doc-module-title">配置选项</h4>
+                        <ul class="list-disc pl-6 space-y-1">
+                            <li>请求URL：目标网址</li>
+                            <li>请求方法：GET、POST、PUT、DELETE</li>
+                            <li>请求头：JSON格式，如{"Content-Type": "application/json"}</li>
+                            <li>请求体：POST/PUT请求的内容</li>
+                            <li>请求超时：HTTP请求的超时时间，单位为秒（默认30秒）</li>
+                            <li>使用HTTP/2：启用HTTP/2协议进行请求，可提高性能</li>
+                            <li>检查状态码：自动检查HTTP响应状态码是否为成功(2xx)，失败时抛出错误</li>
+                            <li>输出变量名：存储响应的变量名</li>
+                            <li>状态码变量名：可选，存储HTTP响应状态码的变量名</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="doc-example">
+                        <h4 class="font-medium text-gray-700 mb-2">使用示例：</h4>
+                        <ol class="list-decimal pl-6 space-y-1">
+                            <li>配置一个GET请求到API</li>
+                            <li>设置适当的请求超时时间（如10秒）</li>
+                            <li>对于关键请求，启用状态码检查</li>
+                            <li>将响应保存到变量[api_response]</li>
+                            <li>将状态码保存到变量[status_code]</li>
+                            <li>对性能敏感的请求启用HTTP/2</li>
+                            <li>使用条件判断模块检查状态码或响应内容</li>
+                            <li>使用JSON解析模块提取需要的数据</li>
+                            <li>基于提取的数据执行后续操作</li>
+                        </ol>
+                    </div>
+                    
+                    <div class="bg-blue-50 p-4 rounded-lg mt-4 mb-4 border-l-4 border-blue-400">
+                        <h4 class="font-medium text-blue-800 mb-2">HTTP/2和状态码检查功能：</h4>
+                        <ul class="list-disc pl-6 space-y-1 text-blue-800">
+                            <li>
+                                <strong>HTTP/2协议支持</strong>：启用HTTP/2可实现更快的页面加载速度、头部压缩、多路复用等优势，特别适合需要并发请求的场景。对支持HTTP/2的服务，可显著提升性能。
+                            </li>
+                            <li>
+                                <strong>状态码自动检查</strong>：启用后，系统会自动验证HTTP响应状态码是否在2xx范围内（表示成功），若不在此范围，模块会立即返回错误而不再处理响应内容，简化了工作流中的错误处理逻辑。
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <div id="domain-check" class="mb-6">
+                    <h3 class="doc-module-title">5.2 检查域名</h3>
+                    <p class="mb-4">检查多个域名中哪个可用并返回结果，适用于多节点服务、负载均衡或备份域名选择。</p>
+                    
+                    <div class="doc-module-card">
+                        <h4 class="doc-module-title">配置选项</h4>
+                        <ul class="list-disc pl-6 space-y-1">
+                            <li>域名列表：要检查的域名列表，每行一个域名</li>
+                            <li>端口：连接端口，默认为80</li>
+                            <li>超时时间：连接超时时间，单位为秒，默认5秒</li>
+                            <li>输出变量名：存储首个可用域名的变量名</li>
+                            <li>所有结果变量名：可选，存储所有域名检查结果的变量名</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="doc-example">
+                        <h4 class="font-medium text-gray-700 mb-2">域名列表格式：</h4>
+                        <p class="text-gray-600 mb-2">每行输入一个域名，不需要添加http://或https://前缀：</p>
+<pre class="bg-gray-100 p-2 text-gray-800 text-sm rounded">
+api.example.com
+backup-api.example.com
+example.org
+</pre>
+                        
+                        <h4 class="font-medium text-gray-700 mt-3 mb-2">使用场景：</h4>
+                        <ul class="list-disc pl-6 space-y-1">
+                            <li>检查多个API服务器中哪个可用，并优先使用可用的服务器</li>
+                            <li>在高可用性系统中选择可用的节点</li>
+                            <li>检测多个镜像站点的连通性</li>
+                            <li>负载均衡或故障转移配置</li>
+                        </ul>
+                        
+                        <h4 class="font-medium text-gray-700 mt-3 mb-2">工作原理：</h4>
+                        <p class="text-gray-600">模块会按顺序检查每个域名，通过建立TCP连接验证域名的可用性：</p>
+                        <ol class="list-decimal pl-6 space-y-1 text-gray-600">
+                            <li>依次建立到每个域名指定端口的TCP连接</li>
+                            <li>如果连接成功，记录该域名为可用</li>
+                            <li>找到第一个可用域名后，如果未设置"所有结果变量名"，则停止检查</li>
+                            <li>如果设置了"所有结果变量名"，将检查所有域名并保存完整结果</li>
+                            <li>输出第一个可用的域名，如果都不可用则返回错误</li>
+                        </ol>
+                    </div>
+                </div>
+                
+                <div id="json-parse" class="mb-6">
+                    <h3 class="doc-module-title">5.3 解析JSON</h3>
+                    <p class="mb-4">解析JSON字符串并提取指定路径的数据。</p>
+                    
+                    <div class="doc-module-card">
+                        <h4 class="doc-module-title">配置选项</h4>
+                        <ul class="list-disc pl-6 space-y-1">
+                            <li>JSON字符串：要解析的JSON字符串或变量</li>
+                            <li>数据路径：要提取的数据路径，如data.items[0].name</li>
+                            <li>输出变量名：存储提取数据的变量名</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="doc-example">
+                        <h4 class="font-medium text-gray-700 mb-2">路径示例：</h4>
+                        <ul class="list-disc pl-6 space-y-1">
+                            <li><code>user.name</code> - 提取user对象中的name字段</li>
+                            <li><code>data.items[0]</code> - 提取data.items数组的第一个元素</li>
+                            <li><code>results[2].value</code> - 提取results数组第三个元素的value字段</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 数据处理模块概述 -->
+        <section id="data-modules" class="doc-section">
+            <h2 class="doc-section-title">数据处理模块</h2>
+            
+            <div class="doc-category-text">
+                <p>数据处理模块用于处理各种类型的数据，包括变量操作、条件判断、循环和随机值生成等功能。这些模块可帮助您在工作流中实现更复杂的数据处理逻辑。</p>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div class="doc-category-card border-green-500 bg-green-50">
+                    <div class="flex items-center mb-2">
+                        <i class="bi bi-input-cursor-text text-green-600 text-xl mr-2"></i>
+                        <h3 class="font-semibold text-green-800">变量操作</h3>
+                    </div>
+                    <p class="text-sm text-green-700">创建和管理工作流中的变量，用于存储和传递数据。</p>
+                </div>
+                
+                <div class="doc-category-card border-purple-500 bg-purple-50">
+                    <div class="flex items-center mb-2">
+                        <i class="bi bi-question-diamond text-purple-600 text-xl mr-2"></i>
+                        <h3 class="font-semibold text-purple-800">条件判断</h3>
+                    </div>
+                    <p class="text-sm text-purple-700">根据条件执行不同的工作流路径，实现动态决策。</p>
+                </div>
+                
+                <div class="doc-category-card border-yellow-500 bg-yellow-50">
+                    <div class="flex items-center mb-2">
+                        <i class="bi bi-arrow-repeat text-yellow-600 text-xl mr-2"></i>
+                        <h3 class="font-semibold text-yellow-800">重复操作</h3>
+                    </div>
+                    <p class="text-sm text-yellow-700">重复执行特定模块，用于批量处理或定时任务。</p>
+                </div>
+                
+                <div class="doc-category-card border-blue-500 bg-blue-50">
+                    <div class="flex items-center mb-2">
+                        <i class="bi bi-shuffle text-blue-600 text-xl mr-2"></i>
+                        <h3 class="font-semibold text-blue-800">随机数生成</h3>
+                    </div>
+                    <p class="text-sm text-blue-700">生成随机整数或字符串，用于测试或安全相关场景。</p>
+                </div>
+                
+                <div class="doc-category-card border-indigo-500 bg-indigo-50">
+                    <div class="flex items-center mb-2">
+                        <i class="bi bi-calendar-date text-indigo-600 text-xl mr-2"></i>
+                        <h3 class="font-semibold text-indigo-800">时间处理</h3>
+                    </div>
+                    <p class="text-sm text-indigo-700">获取或转换时间戳和日期格式，用于时间相关操作。</p>
+                </div>
+                
+                <div class="doc-category-card border-red-500 bg-red-50">
+                    <div class="flex items-center mb-2">
+                        <i class="bi bi-hourglass-split text-red-600 text-xl mr-2"></i>
+                        <h3 class="font-semibold text-red-800">延时操作</h3>
+                    </div>
+                    <p class="text-sm text-red-700">在工作流执行过程中添加延时，控制执行节奏。</p>
+                </div>
+                
+                <div class="doc-category-card border-teal-500 bg-teal-50">
+                    <div class="flex items-center mb-2">
+                        <i class="bi bi-calculator text-teal-600 text-xl mr-2"></i>
+                        <h3 class="font-semibold text-teal-800">计算</h3>
+                    </div>
+                    <p class="text-sm text-teal-700">对两个变量或变量与固定数字进行四则运算。</p>
+                </div>
+                
+                <div class="doc-category-card border-orange-500 bg-orange-50">
+                    <div class="flex items-center mb-2">
+                        <i class="bi bi-123 text-orange-600 text-xl mr-2"></i>
+                        <h3 class="font-semibold text-orange-800">数字类型</h3>
+                    </div>
+                    <p class="text-sm text-orange-700">设置数字为整数或指定小数位数，控制数字显示格式。</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- 脚本配置模块 -->
+        <section id="config-modules" class="doc-section">
+            <h2 class="doc-section-title">脚本配置模块</h2>
+            <div class="doc-category-text">
+                <p class="mb-4">脚本配置模块用于控制工作流的执行逻辑和数据流向。</p>
+                
+                <div id="variable-modules" class="mb-6">
+                    <h3 class="doc-module-title">6.1 变量操作</h3>
+                    
+                    <div class="space-y-4">
+                        <div class="doc-module-card">
+                            <h4 class="doc-module-title">设置变量</h4>
+                            <p class="mb-2">设置一个变量的值，可以是固定值或引用其他变量。</p>
+                            <div class="doc-example">
+                                <p><strong>变量名：</strong> 如user_name</p>
+                                <p><strong>变量值：</strong> 直接值或引用，如"张三"或[api_result]</p>
+                            </div>
+                        </div>
+                        
+                        <div class="doc-module-card">
+                            <h4 class="doc-module-title">配置文件操作</h4>
+                            <p class="mb-2">读取或修改系统配置文件，支持读取账号信息。</p>
+                            <div class="doc-example">
+                                <p><strong>操作类型：</strong> 读取(read)、写入(write)、读取账号(read_account)</p>
+                                <p><strong>使用场景：</strong> 获取系统配置、更新配置参数、读取账号凭证</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div id="calculation" class="mb-6">
+                    <h3 class="doc-module-title">6.2 计算</h3>
+                    
+                    <div class="space-y-4">
+                        <div class="doc-module-card">
+                            <h4 class="doc-module-title">计算</h4>
+                            <p class="mb-2">对两个变量或变量与固定数字进行四则运算，支持加减乘除。</p>
+                            <div class="doc-example">
+                                <h4 class="font-medium text-gray-700 mb-2">配置选项：</h4>
+                                <ul class="list-disc pl-6 space-y-1">
+                                    <li><strong>第一个数值：</strong> 固定数字或变量，如 10 或 [price]</li>
+                                    <li><strong>运算符：</strong> 选择 +、-、*、/ 四种运算符之一</li>
+                                    <li><strong>第二个数值：</strong> 固定数字或变量，如 5 或 [discount]</li>
+                                    <li><strong>输出变量名：</strong> 存储计算结果的变量名，如 result</li>
+                                </ul>
+                                
+                                <h4 class="font-medium text-gray-700 mt-3 mb-2">使用场景示例：</h4>
+                                <ul class="list-disc pl-6 space-y-1">
+                                    <li>计算商品价格加税：[price] + ([price] * 0.1)</li>
+                                    <li>计算折扣价格：[price] - [discount]</li>
+                                    <li>计算总金额：[quantity] * [unit_price]</li>
+                                    <li>计算平均值：[total] / [count]</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div id="number-format" class="mb-6">
+                    <h3 class="doc-module-title">6.3 数字类型</h3>
+                    
+                    <div class="space-y-4">
+                        <div class="doc-module-card">
+                            <h4 class="doc-module-title">数字类型</h4>
+                            <p class="mb-2">设置数字为整数或指定小数位数，控制数字的显示格式和精度。</p>
+                            <div class="doc-example">
+                                <h4 class="font-medium text-gray-700 mb-2">格式化类型：</h4>
+                                <ul class="list-disc pl-6 space-y-1">
+                                    <li><strong>保留小数位数：</strong> 保留指定位数的小数，如 123.456 → 123.46（保留2位）</li>
+                                    <li><strong>进一法取整：</strong> 向上取整，如 123.45 → 124</li>
+                                    <li><strong>四舍五入取整：</strong> 四舍五入为整数，如 123.45 → 123，123.56 → 124</li>
+                                    <li><strong>舍弃小数取整：</strong> 直接舍弃小数部分，如 123.99 → 123</li>
+                                </ul>
+                                
+                                <h4 class="font-medium text-gray-700 mt-3 mb-2">使用场景示例：</h4>
+                                <ul class="list-disc pl-6 space-y-1">
+                                    <li>格式化价格显示：保留两位小数</li>
+                                    <li>计算需要的容器数量：使用进一法取整</li>
+                                    <li>近似计算：使用四舍五入</li>
+                                    <li>去除精度误差：使用指定小数位数</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div id="notification-modules" class="mb-6">
+                    <h3 class="doc-module-title">6.4 通知服务</h3>
+                    <p class="mb-4">发送通知消息，支持邮件、微信推送和PushPlus。</p>
+                    
+                    <div class="doc-module-card">
+                        <h4 class="doc-module-title">配置选项</h4>
+                        <ul class="list-disc pl-6 space-y-1">
+                            <li>通知类型：email（邮件）、wxpusher（微信推送）或pushplus（PushPlus推送）</li>
+                            <li>通知标题：消息标题</li>
+                            <li>通知内容：消息正文，支持引用变量[variable]</li>
+                            <li>接收者：邮箱地址、wxpusher的UID或pushplus的topic</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="doc-example">
+                        <h4 class="font-medium text-gray-700 mb-2">使用提示：</h4>
+                        <ul class="list-disc pl-6 space-y-1">
+                            <li>邮件服务需要在系统设置中配置SMTP服务器</li>
+                            <li>WxPusher需要在系统设置中配置AppToken</li>
+                            <li>PushPlus需要在系统设置中配置Token</li>
+                            <li>可结合条件模块，只在特定条件下发送通知</li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <div id="condition-modules" class="mb-6">
+                    <h3 class="doc-module-title">6.5 条件判断</h3>
+                    <p class="mb-4">根据条件判断执行不同的分支路径。条件模块开始条件判断，条件结束模块标记条件判断的结束位置。</p>
+                    
+                    <div class="doc-module-card">
+                        <h4 class="doc-module-title">条件判断模块配置</h4>
+                        <ul class="list-disc pl-6 space-y-1">
+                            <li>输入值：要判断的值或变量[variable]</li>
+                            <li>条件：包含、等于、大于、小于、不包含、为空</li>
+                            <li>比较值：与输入值比较的值</li>
+                            <li>条件成立时标记：条件成立时的分支标记</li>
+                            <li>条件不成立时标记：条件不成立时的分支标记</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="doc-example">
+                        <h4 class="font-medium text-gray-700 mb-2">条件分支示例：</h4>
+                        <ol class="list-decimal pl-6 space-y-1">
+                            <li>先添加"条件判断"模块，配置判断条件</li>
+                            <li>在条件模块之后添加两个或多个分支模块</li>
+                            <li>使用连接线将条件模块的分支输出点连接到对应模块</li>
+                            <li>添加"结束条件判断"模块，并连接所有分支的末端模块</li>
+                            <li>运行时，只有满足条件的分支会被执行</li>
+                        </ol>
+                    </div>
+                    
+                </div>
+            </div>
+        </section>
+
+        <!-- 系统代理模块 -->
+        <section id="system-proxy" class="doc-section">
+            <h2 class="doc-section-title">系统代理</h2>
+            
+            <div class="doc-category-text bg-blue-50 border-l-4 border-blue-500">
+                <p class="text-blue-700">
+                    <i class="bi bi-info-circle-fill mr-2"></i> 系统代理模块允许您为工作流中的HTTP请求设置网络代理，可用于访问需要特定网络环境的资源或绕过网络限制。
+                </p>
+            </div>
+            
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div class="doc-module-card">
+                    <div class="flex items-center mb-3">
+                        <i class="bi bi-ethernet text-indigo-500 text-2xl mr-3"></i>
+                        <h3 class="doc-module-title">系统代理</h3>
+                    </div>
+                    <p class="text-gray-700 mb-3">设置HTTP代理，影响后续模块的网络请求</p>
+                    
+                    <div class="space-y-2 text-sm">
+                        <div class="flex">
+                            <span class="font-medium text-gray-600 w-24">代理URL</span>
+                            <span class="text-gray-800">http://username:password@proxy.example.com:8080</span>
+                        </div>
+                        <div class="flex">
+                            <span class="font-medium text-gray-600 w-24">影响范围</span>
+                            <span class="text-gray-800">全局/仅当前分支</span>
+                        </div>
+                        <div class="flex">
+                            <span class="font-medium text-gray-600 w-24">重置代理</span>
+                            <span class="text-gray-800">勾选将清除已设置的代理</span>
+                        </div>
+                    </div>
+                    
+                    <div class="doc-example mt-4">
+                        <p class="font-medium text-gray-600 mb-2">使用示例：</p>
+                        <ul class="list-disc pl-5 space-y-1 text-gray-700">
+                            <li>设置代理访问国外API</li>
+                            <li>针对特定请求使用不同代理</li>
+                            <li>在工作流结束时重置代理设置</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 随机数模块 -->
+        <section id="random-number" class="doc-section">
+            <h2 class="doc-section-title">随机数</h2>
+            
+            <div class="doc-category-text bg-purple-50 border-l-4 border-purple-500">
+                <p class="text-purple-700">
+                    <i class="bi bi-info-circle-fill mr-2"></i> 随机数模块能够生成各种类型的随机值，包括指定范围内的整数和自定义字符集的随机字符串，适用于创建临时密码、测试数据或需要随机化的场景。
+                </p>
+            </div>
+            
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div class="doc-module-card">
+                    <div class="flex items-center mb-3">
+                        <i class="bi bi-shuffle text-purple-500 text-2xl mr-3"></i>
+                        <h3 class="doc-module-title">随机数</h3>
+                    </div>
+                    <p class="text-gray-700 mb-3">生成指定范围内的随机数</p>
+                    
+                    <div class="space-y-2 text-sm">
+                        <div class="flex">
+                            <span class="font-medium text-gray-600 w-24">随机数类型</span>
+                            <span class="text-gray-800">整数/字符串</span>
+                        </div>
+                        <div class="flex">
+                            <span class="font-medium text-gray-600 w-24">最小值</span>
+                            <span class="text-gray-800">随机整数的最小值（默认1）</span>
+                        </div>
+                        <div class="flex">
+                            <span class="font-medium text-gray-600 w-24">最大值</span>
+                            <span class="text-gray-800">随机整数的最大值（默认100）</span>
+                        </div>
+                        <div class="flex">
+                            <span class="font-medium text-gray-600 w-24">字符串长度</span>
+                            <span class="text-gray-800">随机字符串的长度（默认8）</span>
+                        </div>
+                        <div class="flex">
+                            <span class="font-medium text-gray-600 w-24">字符类型</span>
+                            <span class="text-gray-800">数字/字母/数字+字母/数字+字母+符号</span>
+                        </div>
+                        <div class="flex">
+                            <span class="font-medium text-gray-600 w-24">输出变量名</span>
+                            <span class="text-gray-800">存储随机数结果的变量名</span>
+                        </div>
+                    </div>
+                    
+                    <div class="doc-example mt-4">
+                        <p class="font-medium text-gray-600 mb-2">使用示例：</p>
+                        <ul class="list-disc pl-5 space-y-1 text-gray-700">
+                            <li>生成1-100之间的随机整数</li>
+                            <li>生成8位随机密码（数字+字母）</li>
+                            <li>生成包含特殊字符的随机字符串</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 时间戳模块 -->
+        <section id="timestamp" class="doc-section">
+            <h2 class="doc-section-title">时间戳</h2>
+            
+            <div class="doc-category-text bg-green-50 border-l-4 border-green-500">
+                <p class="text-green-700">
+                    <i class="bi bi-info-circle-fill mr-2"></i> 时间戳模块提供了获取当前时间和时间格式转换的功能，可用于创建定时任务、日志记录或需要精确时间信息的场景。
+                </p>
+            </div>
+            
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div class="doc-module-card">
+                    <div class="flex items-center mb-3">
+                        <i class="bi bi-calendar-date text-green-500 text-2xl mr-3"></i>
+                        <h3 class="doc-module-title">时间戳</h3>
+                    </div>
+                    <p class="text-gray-700 mb-3">获取当前时间或将指定时间转为时间戳</p>
+                    
+                    <div class="space-y-2 text-sm">
+                        <div class="flex">
+                            <span class="font-medium text-gray-600 w-24">操作类型</span>
+                            <span class="text-gray-800">获取当前时间/转换时间字符串</span>
+                        </div>
+                        <div class="flex">
+                            <span class="font-medium text-gray-600 w-24">输出格式</span>
+                            <span class="text-gray-800">时间戳(秒)/时间戳(毫秒)/格式化时间</span>
+                        </div>
+                        <div class="flex">
+                            <span class="font-medium text-gray-600 w-24">日期格式</span>
+                            <span class="text-gray-800">如: %Y-%m-%d %H:%M:%S</span>
+                        </div>
+                        <div class="flex">
+                            <span class="font-medium text-gray-600 w-24">输入时间</span>
+                            <span class="text-gray-800">要转换的时间字符串或变量</span>
+                        </div>
+                        <div class="flex">
+                            <span class="font-medium text-gray-600 w-24">输入格式</span>
+                            <span class="text-gray-800">输入时间的格式</span>
+                        </div>
+                        <div class="flex">
+                            <span class="font-medium text-gray-600 w-24">输出变量名</span>
+                            <span class="text-gray-800">存储时间结果的变量名</span>
+                        </div>
+                    </div>
+                    
+                    <div class="doc-example mt-4">
+                        <p class="font-medium text-gray-600 mb-2">使用示例：</p>
+                        <ul class="list-disc pl-5 space-y-1 text-gray-700">
+                            <li>获取当前Unix时间戳（秒级）</li>
+                            <li>获取当前格式化日期时间（如：2023-12-25 08:30:00）</li>
+                            <li>将时间字符串转换为时间戳</li>
+                            <li>生成特定格式的时间字符串用于API请求</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 导入导出 -->
+        <section id="import-export" class="doc-section">
+            <h2 class="doc-section-title">导入导出</h2>
+            <div class="doc-category-text">
+                <p class="mb-4">ReedFlow提供了工作流导入导出功能，方便备份和迁移工作流。</p>
+                
+                <div class="space-y-6">
+                    <div>
+                        <h3 class="doc-module-title">导出工作流</h3>
+                        <p class="mb-2">将工作流导出为.rfj 文件。</p>
+                        <ol class="list-decimal pl-6 space-y-1 mb-4">
+                            <li>在"工作流"页面，找到要导出的工作流</li>
+                            <li>点击"导出"按钮</li>
+                            <li>浏览器将自动下载.rfj 文件</li>
+                        </ol>
+                        <div class="bg-blue-50 p-4 rounded-lg">
+                            <p class="text-blue-700"><i class="bi bi-info-circle mr-2"></i>导出的工作流包含所有模块配置和连接信息，但不包含执行历史和日志。</p>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <h3 class="doc-module-title">导入工作流</h3>
+                        <p class="mb-2">从.rfj 文件导入工作流。</p>
+                        <ol class="list-decimal pl-6 space-y-1 mb-4">
+                            <li>在"工作流"页面，点击"导入工作流"按钮</li>
+                            <li>选择要导入的.rfj 文件</li>
+                            <li>系统会验证文件格式并导入工作流</li>
+                            <li>导入成功后，可以在"工作流"看到新添加的工作流</li>
+                        </ol>
+                        <!-- <div class="bg-yellow-50 p-4 rounded-lg">
+                            <p class="text-yellow-700"><i class="bi bi-exclamation-triangle mr-2"></i>注意：导入工作流时，如果存在同名工作流，系统会自动重命名为"原名称_导入"。</p>
+                        </div> -->
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 使用建议 -->
+        <section id="best-practices" class="doc-section">
+            <h2 class="doc-section-title">使用建议</h2>
+            <div class="doc-category-text">
+                <p class="mb-4">以下是一些使用ReedFlow系统的建议：</p>
+                
+                <div class="space-y-6">
+                    <div class="border-l-4 border-indigo-500 pl-4">
+                        <h3 class="text-lg font-medium text-gray-900 mb-2">合理规划工作流</h3>
+                        <ul class="list-disc pl-6 space-y-1">
+                            <li>在创建复杂工作流前，先在纸上或工具中规划流程</li>
+                            <li>将大型工作流拆分为多个小型工作流，便于管理和调试</li>
+                            <li>为模块和变量使用有意义的名称，提高可读性</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="border-l-4 border-indigo-500 pl-4">
+                        <h3 class="text-lg font-medium text-gray-900 mb-2">异常处理</h3>
+                        <ul class="list-disc pl-6 space-y-1">
+                            <li>使用条件判断模块检查操作结果，处理可能的错误</li>
+                            <li>在关键步骤后添加通知模块，及时报告执行状态</li>
+                            <li>定期检查工作流日志，发现并解决潜在问题</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="border-l-4 border-indigo-500 pl-4">
+                        <h3 class="text-lg font-medium text-gray-900 mb-2">性能优化</h3>
+                        <ul class="list-disc pl-6 space-y-1">
+                            <li>避免不必要的重复请求，合理使用变量存储中间结果</li>
+                            <li>对于大型数据，使用JSON解析模块只提取需要的部分</li>
+                            <li>使用间隔时间模块避免过于频繁的API调用</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="border-l-4 border-indigo-500 pl-4">
+                        <h3 class="text-lg font-medium text-gray-900 mb-2">安全建议</h3>
+                        <ul class="list-disc pl-6 space-y-1">
+                            <li>敏感信息（如API密钥）建议使用AES加密存储</li>
+                            <li>使用账号配置功能集中管理服务凭证</li>
+                            <li>定期备份重要的工作流配置，使用导出功能</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </div>
+</div>
+
+<!-- 移动端导航按钮 -->
+<button id="docMobileNavButton" class="doc-mobile-nav-button">
+    <i class="bi bi-list text-xl"></i>
+</button>
+
+<!-- 移动端覆盖层 -->
+<div id="docOverlay" class="doc-overlay"></div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const docSidebar = document.getElementById('docSidebar');
+        const docMobileNavButton = document.getElementById('docMobileNavButton');
+        const docOverlay = document.getElementById('docOverlay');
+        const navItems = document.querySelectorAll('.doc-nav-item');
+        const body = document.body;
+        
+        // 强制触发重绘，修复某些浏览器下的渲染问题
+        setTimeout(function() {
+            if (docSidebar) {
+                docSidebar.style.display = 'none';
+                void docSidebar.offsetHeight; // 强制重绘
+                docSidebar.style.display = '';
+            }
+        }, 10);
+        
+        // 点击导航按钮显示侧边栏
+        docMobileNavButton.addEventListener('click', function(e) {
+            e.preventDefault(); // 防止默认行为
+            e.stopPropagation(); // 防止事件冒泡
+            
+            
+            docSidebar.classList.toggle('active');
+            docOverlay.classList.toggle('active');
+            body.classList.toggle('sidebar-active'); // 禁止背景滚动
+            
+            // 检查是否已添加活动类
+            if (docSidebar.classList.contains('active')) {
+                // 强制重新计算样式，解决某些移动浏览器不更新CSS的问题
+                docSidebar.style.transform = 'translateX(0)';
+            } else {
+                docSidebar.style.transform = 'translateX(-100%)';
+            }
+        });
+        
+        // 点击覆盖层隐藏侧边栏
+        docOverlay.addEventListener('click', function() {
+            docSidebar.classList.remove('active');
+            docOverlay.classList.remove('active');
+            body.classList.remove('sidebar-active');
+            docSidebar.style.transform = 'translateX(-100%)';
+        });
+        
+        // 点击导航项隐藏侧边栏
+        navItems.forEach(item => {
+            item.addEventListener('click', function() {
+                if (window.innerWidth <= 1024) {
+                    docSidebar.classList.remove('active');
+                    docOverlay.classList.remove('active');
+                    body.classList.remove('sidebar-active');
+                    docSidebar.style.transform = 'translateX(-100%)';
+                }
+            });
+        });
+        
+        // 滚动时突出显示当前导航项
+        window.addEventListener('scroll', function() {
+            const sections = document.querySelectorAll('.doc-section');
+            let current = '';
+            
+            sections.forEach(section => {
+                const sectionTop = section.offsetTop;
+                const sectionHeight = section.clientHeight;
+                if (pageYOffset >= sectionTop - 200) {
+                    current = section.getAttribute('id');
+                }
+            });
+            
+            navItems.forEach(item => {
+                item.classList.remove('active');
+                if (item.getAttribute('href') === `#${current}`) {
+                    item.classList.add('active');
+                }
+            });
+        });
+        
+        // 添加测试功能，在移动设备上显示菜单状态
+        if (window.innerWidth <= 1024) {
+            docMobileNavButton.addEventListener('touchstart', function() {
+            });
+            
+            // 初始化检查
+            setTimeout(function() {
+            }, 1000);
+        }
+    });
+</script>
+{% endblock %} 

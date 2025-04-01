@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}ReedFlow - 自动化工作流管理系统{% endblock %}</title>
+    <!-- 本地CSS文件 -->
+    <link href="/static/css/styles.css" rel="stylesheet">
+    <!-- 本地Bootstrap图标 -->
+    <link href="/static/css/bootstrap-icons.css" rel="stylesheet">
+    <!-- 本地Font Awesome -->
+    <link href="/static/css/fontawesome.css" rel="stylesheet">
+    <!-- 备用CDN链接 -->
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Toast notification library -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
+    <link rel="shortcut icon" href="/static/img/favicon.ico">
+    <script src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
+    <!-- 本地Font Awesome脚本 -->
+    <script src="/static/js/fontawesome.js"></script>
+    
+    {% block head %}{% endblock %}
+    {% block extra_css %}{% endblock %}
+    <style>
+        /* Toast提醒样式 */
+        .toast-success {
+            background: #4CAF50;
+        }
+        .toast-error {
+            background: #ff5f6d;
+        }
+        .toast-info {
+            background: #3f87a6;
+        }
+
+        /* 确保footer始终位于页面底部 */
+        body {
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
+        main {
+            flex: 1; /* 主内容区扩展，确保footer固定到底部 */
+        }
+    </style>
+</head>
+<body class="bg-gray-100">
+    <!-- 导航栏 - 仅当用户已登录时显示 -->
+    {% if request.session.get("user") %}
+    <nav class="bg-white shadow-md">
+        <div class="container mx-auto px-4">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <a href="/admin/dashboard" class="text-xl font-bold text-indigo-600">ReedFlow</a>
+                    </div>
+                    <div class="hidden md:ml-10 md:flex md:space-x-6">
+                        <a href="/admin/dashboard" class="inline-flex items-center px-3 py-2 rounded-md text-sm font-medium {% if request.url.path == '/admin/dashboard' %}text-indigo-600 bg-indigo-50{% else %}text-gray-700 hover:text-indigo-600 hover:bg-gray-50{% endif %}">
+                            <i class="bi bi-diagram-3 mr-2"></i>工作流
+                        </a>
+                        <a href="/admin/modules" class="inline-flex items-center px-3 py-2 rounded-md text-sm font-medium {% if request.url.path == '/admin/modules' %}text-indigo-600 bg-indigo-50{% else %}text-gray-700 hover:text-indigo-600 hover:bg-gray-50{% endif %}">
+                            <i class="bi bi-box mr-2"></i>模块列表
+                        </a>
+                        <a href="/admin/documentation" class="inline-flex items-center px-3 py-2 rounded-md text-sm font-medium {% if request.url.path == '/admin/documentation' %}text-indigo-600 bg-indigo-50{% else %}text-gray-700 hover:text-indigo-600 hover:bg-gray-50{% endif %}">
+                            <i class="bi bi-book mr-2"></i>使用文档
+                        </a>
+                        <a href="/admin/account_config" class="inline-flex items-center px-3 py-2 rounded-md text-sm font-medium {% if request.url.path == '/admin/account_config' %}text-indigo-600 bg-indigo-50{% else %}text-gray-700 hover:text-indigo-600 hover:bg-gray-50{% endif %}">
+                            <i class="bi bi-person-badge mr-2"></i>账号配置
+                        </a>
+                        <a href="/admin/python-converter" class="inline-flex items-center px-3 py-2 rounded-md text-sm font-medium {% if request.url.path == '/admin/python-converter' %}text-indigo-600 bg-indigo-50{% else %}text-gray-700 hover:text-indigo-600 hover:bg-gray-50{% endif %}">
+                            <i class="bi bi-code-slash mr-2"></i>Python转换
+                        </a>
+                        <a href="/admin/settings" class="inline-flex items-center px-3 py-2 rounded-md text-sm font-medium {% if request.url.path == '/admin/settings' %}text-indigo-600 bg-indigo-50{% else %}text-gray-700 hover:text-indigo-600 hover:bg-gray-50{% endif %}">
+                            <i class="bi bi-gear mr-2"></i>系统设置
+                        </a>
+                        <a href="/admin/logs" class="inline-flex items-center px-3 py-2 rounded-md text-sm font-medium {% if request.url.path == '/admin/logs' %}text-indigo-600 bg-indigo-50{% else %}text-gray-700 hover:text-indigo-600 hover:bg-gray-50{% endif %}">
+                            <i class="bi bi-journal-text mr-2"></i>系统日志
+                        </a>
+                    </div>
+                </div>
+                <div class="flex items-center">
+                    <div class="ml-3 relative">
+                        <div class="flex items-center">
+                            <span class="text-gray-700 mr-3">
+                                <i class="bi bi-person-circle mr-1"></i>管理员
+                            </span>
+                            <a href="/logout" class="text-sm font-medium text-indigo-600 hover:text-indigo-500 hover:underline">
+                                退出登录
+                            </a>
+                        </div>
+                    </div>
+                    <!-- 移动端菜单按钮 -->
+                    <div class="block md:hidden ml-3">
+                        <button id="mobile-menu-button" class="inline-flex items-center justify-center p-2 rounded-md text-gray-700 bg-gray-200">
+                            <i class="bi bi-list text-sm"></i>
+                            <span class="ml-1 text-sm">菜单</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 移动端导航菜单 -->
+        <div id="mobile-menu" class="block md:hidden ml-3 hidden">
+            <div class="px-2 py-3 space-y-1">
+                <a href="/admin/dashboard" class="flex items-center px-3 py-2 rounded-md text-base font-medium {% if request.url.path == '/admin/dashboard' %}text-indigo-600 bg-indigo-50{% else %}text-gray-700 hover:text-indigo-600 hover:bg-gray-50{% endif %}">
+                    <i class="bi bi-diagram-3 mr-2"></i>工作流
+                </a>
+                <a href="/admin/modules" class="flex items-center px-3 py-2 rounded-md text-base font-medium {% if request.url.path == '/admin/modules' %}text-indigo-600 bg-indigo-50{% else %}text-gray-700 hover:text-indigo-600 hover:bg-gray-50{% endif %}">
+                    <i class="bi bi-box mr-2"></i>模块列表
+                </a>
+                <a href="/admin/documentation" class="flex items-center px-3 py-2 rounded-md text-base font-medium {% if request.url.path == '/admin/documentation' %}text-indigo-600 bg-indigo-50{% else %}text-gray-700 hover:text-indigo-600 hover:bg-gray-50{% endif %}">
+                    <i class="bi bi-book mr-2"></i>使用文档
+                </a>
+                <a href="/admin/account_config" class="flex items-center px-3 py-2 rounded-md text-base font-medium {% if request.url.path == '/admin/account_config' %}text-indigo-600 bg-indigo-50{% else %}text-gray-700 hover:text-indigo-600 hover:bg-gray-50{% endif %}">
+                    <i class="bi bi-person-badge mr-2"></i>账号配置
+                </a>
+                <a href="/admin/python-converter" class="flex items-center px-3 py-2 rounded-md text-base font-medium {% if request.url.path == '/admin/python-converter' %}text-indigo-600 bg-indigo-50{% else %}text-gray-700 hover:text-indigo-600 hover:bg-gray-50{% endif %}">
+                    <i class="bi bi-code-slash mr-2"></i>Python转换
+                </a>
+                <a href="/admin/settings" class="flex items-center px-3 py-2 rounded-md text-base font-medium {% if request.url.path == '/admin/settings' %}text-indigo-600 bg-indigo-50{% else %}text-gray-700 hover:text-indigo-600 hover:bg-gray-50{% endif %}">
+                    <i class="bi bi-gear mr-2"></i>系统设置
+                </a>
+                <a href="/admin/logs" class="flex items-center px-3 py-2 rounded-md text-base font-medium {% if request.url.path == '/admin/logs' %}text-indigo-600 bg-indigo-50{% else %}text-gray-700 hover:text-indigo-600 hover:bg-gray-50{% endif %}">
+                    <i class="bi bi-journal-text mr-2"></i>系统日志
+                </a>
+            </div>
+        </div>
+    </nav>
+    {% endif %}
+
+    <!-- 页面内容 -->
+    <main class="container mx-auto px-4 py-6 mb-16">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- 底部 -->
+    {% if request.session.get("user") %}
+    <footer class="bg-white py-4 border-t border-gray-200">
+        <div class="container mx-auto px-4">
+            <p class="text-center text-gray-500 text-sm">
+                &copy; 2025 ReedFlow 自动化工作流管理系统
+            </p>
+        </div>
+    </footer>
+    {% endif %}
+
+    <!-- JavaScript -->
+    <script>
+        // 显示提示消息函数
+        function showToast(message, type = 'success', duration = 3000) {
+            let bgClass = 'toast-success';
+            if (type === 'error') bgClass = 'toast-error';
+            if (type === 'info') bgClass = 'toast-info';
+            
+            Toastify({
+                text: message,
+                duration: duration,
+                newWindow: true,
+                close: true,
+                gravity: "top",
+                position: "right",
+                className: bgClass,
+            }).showToast();
+        }
+        
+        // 错误提示
+        {% if error %}
+            showToast("{{ error }}", "error");
+        {% endif %}
+        
+        // 成功提示
+        {% if success %}
+            showToast("{{ success }}");
+        {% endif %}
+        
+        // 移动端菜单切换
+        document.addEventListener('DOMContentLoaded', function() {
+            const mobileMenuButton = document.getElementById('mobile-menu-button');
+            const mobileMenu = document.getElementById('mobile-menu');
+            
+            if (mobileMenuButton && mobileMenu) {
+                mobileMenuButton.addEventListener('click', function() {
+                    mobileMenu.classList.toggle('hidden');
+                });
+            }
+        });
+    </script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

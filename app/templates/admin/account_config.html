@@ -1,0 +1,728 @@
+{% extends "base.html" %}
+
+{% block title %}账号配置管理 - ReedFlow{% endblock %}
+
+{% block extra_css %}
+<style>
+    .config-section {
+        margin-bottom: 1.5rem;
+    }
+    
+    .config-item {
+        border: 1px solid #e5e7eb;
+        border-radius: 0.375rem;
+        margin-bottom: 1rem;
+    }
+    
+    .config-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.75rem 1rem;
+        background-color: #f9fafb;
+        border-bottom: 1px solid #e5e7eb;
+        border-top-left-radius: 0.375rem;
+        border-top-right-radius: 0.375rem;
+    }
+    
+    .config-content {
+        padding: 1rem;
+    }
+    
+    .config-footer {
+        border-top: 1px solid #e5e7eb;
+        padding: 0.75rem 1rem;
+        display: flex;
+        justify-content: flex-end;
+    }
+    
+    .category-description {
+        font-size: 0.875rem;
+        color: #6b7280;
+        margin-bottom: 1rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="mb-4 flex justify-between items-center">
+    <!-- <div>
+        <h1 class="text-2xl font-bold text-gray-900">账号配置管理</h1>
+        <p class="text-gray-500 mt-1">管理工作流模块可使用的账号配置信息</p>
+    </div> -->
+    <h1 class="text-2xl font-bold text-gray-900"> </h1>
+    <button onclick="addAccountConfig()" class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+        <i class="bi bi-plus-circle mr-2"></i> 添加配置
+    </button>
+</div>
+
+<div class="bg-white shadow rounded-lg mb-6 p-4">
+    <div id="account-config-container">
+        <!-- 账号配置项将通过JavaScript动态生成 -->
+        <div class="text-center py-8 text-gray-500" id="empty-message">
+            <i class="bi bi-info-circle text-2xl mb-2"></i>
+            <p>暂无配置信息，请点击"添加配置"按钮添加</p>
+        </div>
+    </div>
+</div>
+
+<!-- 账号配置编辑模态框 -->
+<div class="fixed inset-0 bg-gray-500 bg-opacity-75 hidden" id="edit-modal">
+    <div class="flex items-center justify-center min-h-screen p-4">
+        <div class="bg-white rounded-lg shadow-xl max-w-lg w-full">
+            <div class="flex justify-between items-center p-4 border-b">
+                <h3 class="text-lg font-medium text-gray-900" id="modal-title">添加配置</h3>
+                <button onclick="closeModal()" class="text-gray-400 hover:text-gray-500">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+            <div class="p-4">
+                <form id="account-form">
+                    <div class="grid grid-cols-1 gap-4 mb-4">
+                        <div>
+                            <label for="account-category" class="block text-sm font-medium text-gray-700">配置类别</label>
+                            <select id="account-category" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" onchange="updateServiceOptions()">
+                                <option value="static_tokens">静态Token</option>
+                                <option value="dynamic_tokens">动态Token</option>
+                                <option value="other">其他信息</option>
+                            </select>
+                            <p class="mt-1 text-sm text-gray-500" id="category-description"></p>
+                        </div>
+                        <div>
+                            <label for="account-service" class="block text-sm font-medium text-gray-700">服务名称</label>
+                            <input type="text" id="account-service" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" placeholder="如: weibo, alipay, custom_service">
+                        </div>
+                        <div>
+                            <label for="account-name" class="block text-sm font-medium text-gray-700">配置名称</label>
+                            <input type="text" id="account-name" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" placeholder="如: default, test, production">
+                        </div>
+                    </div>
+                    
+                    <div id="account-fields">
+                        <!-- 账号字段表单将根据类别动态生成 -->
+                    </div>
+                    
+                    <div id="dynamic-fields-container">
+                        <div class="flex justify-between items-center mb-4">
+                            <h4 class="text-sm font-medium text-gray-700">自定义字段</h4>
+                            <button type="button" onclick="addCustomField()" class="text-indigo-600 hover:text-indigo-800">
+                                <i class="bi bi-plus-circle"></i> 添加字段
+                            </button>
+                        </div>
+                        <div id="custom-fields">
+                            <!-- 自定义字段将在这里添加 -->
+                        </div>
+                    </div>
+                    
+                    <div class="flex justify-end mt-4 pt-4 border-t">
+                        <button type="button" onclick="closeModal()" class="mr-2 inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                            取消
+                        </button>
+                        <button type="button" onclick="saveAccountConfig()" class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                            保存
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // 账号配置数据
+    let accountConfig = {{ account_config|tojson }};
+    // 当前编辑的账号路径
+    let currentEditPath = null;
+    // 自定义字段计数器
+    let customFieldCounter = 0;
+    
+    // 账号字段模板
+    const fieldTemplates = {
+        static_tokens: {
+            default: [
+                { name: "username", label: "用户名", type: "text", placeholder: "user@example.com" },
+                { name: "password", label: "密码", type: "password", placeholder: "密码" }
+            ]
+        },
+        dynamic_tokens: {
+            default: [
+                { name: "username", label: "用户名", type: "text", placeholder: "用户名" },
+                { name: "token", label: "Token", type: "text", placeholder: "访问令牌" },
+                { name: "expires_at", label: "过期时间", type: "text", placeholder: "YYYY-MM-DD HH:MM:SS" }
+            ]
+        },
+        other: {
+            default: []
+        }
+    };
+    
+    // 类别描述
+    const categoryDescriptions = {
+        static_tokens: "不需要更新的账号信息，常用于配置账号和密码，工作流会自动完成登录获取Token的步骤",
+        dynamic_tokens: "工作流会对其进行更新的账号信息，常用于配置账号和Token，每次运行都会对其进行写入操作",
+        other: "可能会用到的其他信息，自由度较大，可以随意配置键和值方便进行读写操作"
+    };
+    
+    // 加载页面时初始化
+    document.addEventListener('DOMContentLoaded', function() {
+        renderAccountConfig();
+        updateCategoryDescription();
+    });
+    
+    // 更新类别描述
+    function updateCategoryDescription() {
+        const category = document.getElementById('account-category').value;
+        const description = categoryDescriptions[category] || "";
+        document.getElementById('category-description').textContent = description;
+    }
+    
+    // 渲染账号配置
+    function renderAccountConfig() {
+        // console.log('开始渲染账号配置...');
+        const container = document.getElementById('account-config-container');
+        const emptyMessage = document.getElementById('empty-message');
+        
+        if (!container) {
+            console.error('找不到配置容器元素');
+            return;
+        }
+        
+        // 检查是否有配置
+        if (!accountConfig || !accountConfig.accounts || Object.keys(accountConfig.accounts).length === 0) {
+            // console.log('没有配置数据，显示空消息');
+            if (emptyMessage) {
+                emptyMessage.classList.remove('hidden');
+                container.innerHTML = emptyMessage.outerHTML;
+            } else {
+                container.innerHTML = `
+                    <div class="text-center py-8 text-gray-500">
+                        <i class="bi bi-info-circle text-2xl mb-2"></i>
+                        <p>暂无配置信息，请点击"添加配置"按钮添加</p>
+                    </div>
+                `;
+            }
+            return;
+        }
+        
+        if (emptyMessage) {
+            emptyMessage.classList.add('hidden');
+        }
+        
+        let html = '';
+        
+        try {
+            // 遍历配置类别
+            for (const category in accountConfig.accounts) {
+                html += `
+                    <div class="config-section">
+                        <h2 class="text-lg font-medium text-gray-900 mb-2">${getCategoryName(category)}</h2>
+                        <p class="category-description">${categoryDescriptions[category] || ""}</p>
+                `;
+                
+                // 遍历服务类型
+                for (const service in accountConfig.accounts[category]) {
+                    html += `
+                        <div class="ml-4 mb-3">
+                            <h3 class="text-md font-medium text-gray-800 mb-2">${service}</h3>
+                    `;
+                    
+                    // 遍历配置项
+                    for (const accountName in accountConfig.accounts[category][service]) {
+                        const account = accountConfig.accounts[category][service][accountName];
+                        
+                        html += `
+                            <div class="config-item ml-4" id="config-${category}-${service}-${accountName.replace(/\s+/g, '_')}">
+                                <div class="config-header">
+                                    <span class="font-medium">${accountName}</span>
+                                    <div>
+                                        <button class="text-indigo-600 hover:text-indigo-800 mr-2" onclick="editAccount('${category}', '${service}', '${accountName}')">
+                                            <i class="bi bi-pencil"></i>
+                                        </button>
+                                        <button class="text-red-600 hover:text-red-800" onclick="deleteAccount('${category}', '${service}', '${accountName}')">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="config-content">
+                                    <dl class="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-2">
+                        `;
+                        
+                        // 显示账号字段
+                        for (const key in account) {
+                            const value = key === 'password' ? '••••••••' : account[key];
+                            html += `
+                                <div>
+                                    <dt class="text-sm font-medium text-gray-500">${key}</dt>
+                                    <dd class="text-sm text-gray-900">${value}</dd>
+                                </div>
+                            `;
+                        }
+                        
+                        html += `
+                                    </dl>
+                                </div>
+                            </div>
+                        `;
+                    }
+                    
+                    html += `</div>`;
+                }
+                
+                html += `</div>`;
+            }
+        } catch (error) {
+            console.error('渲染配置时出错:', error);
+            html = `
+                <div class="p-4 bg-red-100 border border-red-200 rounded-md">
+                    <p class="text-red-600">渲染配置时出错，请刷新页面重试</p>
+                </div>
+            `;
+        }
+        
+        // 更新DOM
+        container.innerHTML = html;
+        // console.log('账号配置渲染完成');
+    }
+    
+    // 获取类别名称
+    function getCategoryName(category) {
+        const names = {
+            'static_tokens': '静态Token',
+            'dynamic_tokens': '动态Token',
+            'other': '其他信息'
+        };
+        return names[category] || category;
+    }
+    
+    // 添加账号配置
+    function addAccountConfig() {
+        currentEditPath = null;
+        document.getElementById('modal-title').textContent = '添加配置';
+        document.getElementById('account-category').value = 'static_tokens';
+        document.getElementById('account-service').value = '';
+        document.getElementById('account-name').value = '';
+        
+        // 更新类别描述
+        updateCategoryDescription();
+        
+        // 清空自定义字段
+        document.getElementById('custom-fields').innerHTML = '';
+        customFieldCounter = 0;
+        
+        // 生成字段表单
+        updateServiceOptions();
+        
+        // 显示模态框
+        document.getElementById('edit-modal').classList.remove('hidden');
+    }
+    
+    // 添加自定义字段
+    function addCustomField() {
+        const customFieldsContainer = document.getElementById('custom-fields');
+        const fieldId = `custom_field_${customFieldCounter++}`;
+        
+        const fieldHtml = `
+            <div class="grid grid-cols-3 gap-2 mb-3" id="${fieldId}_container">
+                <div>
+                    <input type="text" id="${fieldId}_key" placeholder="字段名" class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                </div>
+                <div>
+                    <input type="text" id="${fieldId}_value" placeholder="值" class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                </div>
+                <div>
+                    <button type="button" onclick="removeCustomField('${fieldId}')" class="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </div>
+            </div>
+        `;
+        
+        customFieldsContainer.insertAdjacentHTML('beforeend', fieldHtml);
+    }
+    
+    // 移除自定义字段
+    function removeCustomField(fieldId) {
+        const fieldContainer = document.getElementById(`${fieldId}_container`);
+        if (fieldContainer) {
+            fieldContainer.remove();
+        }
+    }
+    
+    // 编辑账号配置
+    function editAccount(category, service, accountName) {
+        currentEditPath = { category, service, accountName };
+        document.getElementById('modal-title').textContent = '编辑配置';
+        document.getElementById('account-category').value = category;
+        document.getElementById('account-service').value = service;
+        document.getElementById('account-name').value = accountName;
+        
+        // 更新类别描述
+        updateCategoryDescription();
+        
+        // 清空自定义字段
+        document.getElementById('custom-fields').innerHTML = '';
+        customFieldCounter = 0;
+        
+        // 生成字段表单并填充数据
+        updateAccountFields(category, service, accountConfig.accounts[category][service][accountName]);
+        
+        // 显示模态框
+        document.getElementById('edit-modal').classList.remove('hidden');
+    }
+    
+    // 关闭模态框
+    function closeModal() {
+        document.getElementById('edit-modal').classList.add('hidden');
+    }
+    
+    // 更新服务选项
+    function updateServiceOptions() {
+        const category = document.getElementById('account-category').value;
+        
+        // 更新类别描述
+        updateCategoryDescription();
+        
+        // 更新账号字段
+        updateAccountFields(category, '');
+        
+        // 控制自定义字段区域的显示
+        const dynamicFieldsContainer = document.getElementById('dynamic-fields-container');
+        if (category === 'other') {
+            dynamicFieldsContainer.style.display = 'block';
+        } else {
+            dynamicFieldsContainer.style.display = 'none';
+        }
+    }
+    
+    // 更新账号字段表单
+    function updateAccountFields(category, service, data = null) {
+        const fieldsContainer = document.getElementById('account-fields');
+        let fields = [];
+        
+        // 获取字段模板
+        if (fieldTemplates[category]) {
+            fields = fieldTemplates[category].default || [];
+        }
+        
+        // 生成字段HTML
+        let html = '';
+        
+        fields.forEach(field => {
+            const value = data ? data[field.name] : '';
+            
+            if (field.type === 'checkbox') {
+                html += `
+                    <div class="mb-4">
+                        <div class="flex items-center">
+                            <input type="checkbox" id="field_${field.name}" name="${field.name}" class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded" ${data && data[field.name] ? 'checked' : ''}>
+                            <label for="field_${field.name}" class="ml-2 block text-sm text-gray-900">${field.label}</label>
+                        </div>
+                    </div>
+                `;
+            } else {
+                html += `
+                    <div class="mb-4">
+                        <label for="field_${field.name}" class="block text-sm font-medium text-gray-700">${field.label}</label>
+                        <input type="${field.type}" id="field_${field.name}" name="${field.name}" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" placeholder="${field.placeholder || ''}" value="${value !== undefined ? value : ''}">
+                    </div>
+                `;
+            }
+        });
+        
+        fieldsContainer.innerHTML = html;
+        
+        // 如果是编辑模式，且类别是其他信息，添加自定义字段
+        if (data && category === 'other') {
+            document.getElementById('custom-fields').innerHTML = '';
+            customFieldCounter = 0;
+            
+            // 排除预设的字段
+            const presetFields = fields.map(f => f.name);
+            for (const key in data) {
+                if (!presetFields.includes(key)) {
+                    const fieldId = `custom_field_${customFieldCounter++}`;
+                    const fieldHtml = `
+                        <div class="grid grid-cols-3 gap-2 mb-3" id="${fieldId}_container">
+                            <div>
+                                <input type="text" id="${fieldId}_key" placeholder="字段名" value="${key}" class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                            </div>
+                            <div>
+                                <input type="text" id="${fieldId}_value" placeholder="值" value="${data[key]}" class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                            </div>
+                            <div>
+                                <button type="button" onclick="removeCustomField('${fieldId}')" class="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                    document.getElementById('custom-fields').insertAdjacentHTML('beforeend', fieldHtml);
+                }
+            }
+        }
+    }
+    
+    // 显示提示信息函数
+    function showToastMessage(message, type = 'success', duration = 3000) {
+        // 清除所有可能存在的提示
+        const existingToasts = document.querySelectorAll('.toast-message');
+        existingToasts.forEach(toast => toast.remove());
+        
+        // 创建新提示
+        const toast = document.createElement('div');
+        toast.className = `toast-message fixed bottom-4 right-4 px-4 py-2 rounded-md text-white ${
+            type === 'error' ? 'bg-red-500' : 
+            type === 'info' ? 'bg-blue-500' : 
+            'bg-green-500'
+        } shadow-lg z-50`;
+        toast.textContent = message;
+        
+        // 添加到页面
+        document.body.appendChild(toast);
+        
+        // 返回提示元素以便后续移除
+        if (duration > 0) {
+            setTimeout(() => {
+                if (toast && document.body.contains(toast)) {
+                    toast.remove();
+                }
+            }, duration);
+        }
+        
+        return toast;
+    }
+    
+    // 如果没有全局showToast函数，使用我们自己的实现
+    if (typeof window.showToast !== 'function') {
+        window.showToast = showToastMessage;
+    }
+    
+    // 保存账号配置
+    async function saveAccountConfig() {
+        const category = document.getElementById('account-category').value;
+        const service = document.getElementById('account-service').value;
+        const accountName = document.getElementById('account-name').value;
+        
+        // 基本验证
+        if (!category || !service || !accountName) {
+            showToastMessage('请填写完整的配置信息', 'error');
+            return;
+        }
+        
+        // 显示加载提示
+        const loadingToast = showToastMessage('正在保存...', 'info', 0);
+        
+        try {
+            // 收集账号字段数据
+            const accountData = {};
+            const fieldsContainer = document.getElementById('account-fields');
+            const inputs = fieldsContainer.querySelectorAll('input');
+            
+            inputs.forEach(input => {
+                if (input.type === 'checkbox') {
+                    accountData[input.name] = input.checked;
+                } else if (input.type === 'number') {
+                    accountData[input.name] = parseInt(input.value);
+                } else {
+                    accountData[input.name] = input.value;
+                }
+            });
+            
+            // 收集自定义字段数据
+            if (category === 'other') {
+                const customFields = document.getElementById('custom-fields').querySelectorAll('[id$="_container"]');
+                customFields.forEach(field => {
+                    const fieldId = field.id.replace('_container', '');
+                    const keyInput = document.getElementById(`${fieldId}_key`);
+                    const valueInput = document.getElementById(`${fieldId}_value`);
+                    
+                    if (keyInput && valueInput && keyInput.value.trim()) {
+                        accountData[keyInput.value.trim()] = valueInput.value;
+                    }
+                });
+            }
+            
+            // 确保路径存在
+            if (!accountConfig.accounts) {
+                accountConfig.accounts = {};
+            }
+            
+            if (!accountConfig.accounts[category]) {
+                accountConfig.accounts[category] = {};
+            }
+            
+            if (!accountConfig.accounts[category][service]) {
+                accountConfig.accounts[category][service] = {};
+            }
+            
+            // 如果是编辑模式，且修改了路径，则删除旧配置
+            if (currentEditPath && (currentEditPath.category !== category || 
+                                    currentEditPath.service !== service || 
+                                    currentEditPath.accountName !== accountName)) {
+                deleteAccountFromPath(currentEditPath.category, currentEditPath.service, currentEditPath.accountName);
+            }
+            
+            // 保存新配置
+            accountConfig.accounts[category][service][accountName] = accountData;
+            
+            // 发送保存请求
+            const response = await fetch('/admin/account_config/save', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ config: accountConfig })
+            });
+            
+            // 移除加载提示
+            if (loadingToast) {
+                loadingToast.remove();
+            }
+            
+            if (!response.ok) {
+                showToastMessage('保存失败：服务器错误', 'error');
+                return;
+            }
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                showToastMessage('保存成功', 'success');
+                closeModal();
+                
+                // 确保在UI更新完成后刷新配置列表
+                setTimeout(() => renderAccountConfig(), 100);
+            } else {
+                showToastMessage(result.message || '保存失败', 'error');
+            }
+        } catch (error) {
+            // 移除加载提示
+            if (loadingToast) {
+                loadingToast.remove();
+            }
+            
+            console.error('保存请求出错:', error);
+            showToastMessage('保存请求出错，请重试', 'error');
+        }
+    }
+    
+    // 删除账号配置
+    async function deleteAccount(category, service, accountName) {
+        if (!confirm(`确定要删除 ${getCategoryName(category)}/${service}/${accountName} 配置吗？`)) {
+            return;
+        }
+        
+        // 备份当前配置以便失败时恢复
+        const backupConfig = JSON.parse(JSON.stringify(accountConfig));
+        
+        // 显示加载提示
+        let loadingToast = showToastMessage('正在删除...', 'info', 0);
+        
+        try {
+            // 先从内存中删除配置
+            deleteAccountFromPath(category, service, accountName);
+            
+            // 保存更新后的配置到服务器
+            const response = await fetch('/admin/account_config/save', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ config: accountConfig })
+            });
+            
+            // 删除操作完成，无论成功与否都移除加载提示
+            if (loadingToast) {
+                loadingToast.remove();
+                loadingToast = null;
+            }
+            
+            // 处理响应
+            if (!response.ok) {
+                // HTTP错误
+                accountConfig = backupConfig; // 恢复配置
+                renderAccountConfig(); // 重新渲染
+                showToastMessage('删除失败: 服务器错误', 'error');
+                return;
+            }
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                // 删除成功
+                showToastMessage('删除成功', 'success');
+                // 强制重新渲染配置列表
+                setTimeout(() => renderAccountConfig(), 100);
+            } else {
+                // 服务器返回错误
+                accountConfig = backupConfig; // 恢复配置
+                renderAccountConfig(); // 重新渲染
+                showToastMessage(result.message || '删除失败', 'error');
+            }
+        } catch (error) {
+            // 确保移除加载提示
+            if (loadingToast) {
+                loadingToast.remove();
+            }
+            
+            // 恢复配置并重新渲染
+            accountConfig = backupConfig;
+            renderAccountConfig();
+            
+            // 显示错误
+            console.error('删除请求出错:', error);
+            showToastMessage('删除请求出错，请稍后重试', 'error');
+        }
+    }
+    
+    // 从路径删除账号
+    function deleteAccountFromPath(category, service, accountName) {
+        if (accountConfig.accounts && 
+            accountConfig.accounts[category] && 
+            accountConfig.accounts[category][service] && 
+            accountConfig.accounts[category][service][accountName]) {
+            
+            delete accountConfig.accounts[category][service][accountName];
+            
+            // 如果服务下没有账号，删除服务
+            if (Object.keys(accountConfig.accounts[category][service]).length === 0) {
+                delete accountConfig.accounts[category][service];
+                
+                // 如果类别下没有服务，删除类别
+                if (Object.keys(accountConfig.accounts[category]).length === 0) {
+                    delete accountConfig.accounts[category];
+                }
+            }
+        }
+    }
+    
+    // 从服务器刷新账号配置
+    async function refreshAccountConfig() {
+        try {
+            // 使用正确的路径获取配置
+            const response = await fetch('/admin/account_config');
+            if (response.ok) {
+                // 从HTML响应中提取account_config数据
+                const html = await response.text();
+                // 查找accountConfig变量的定义
+                const configMatch = html.match(/accountConfig\s*=\s*({.*?});/s);
+                if (configMatch && configMatch[1]) {
+                    try {
+                        // 解析JSON数据
+                        accountConfig = JSON.parse(configMatch[1]);
+                        renderAccountConfig();
+                    } catch (e) {
+                        console.error('解析配置数据失败', e);
+                    }
+                }
+            } else {
+                console.error('获取账号配置失败');
+            }
+        } catch (error) {
+            console.error('刷新配置失败', error);
+        }
+    }
+</script>
+{% endblock %} 

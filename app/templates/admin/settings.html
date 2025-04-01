@@ -1,0 +1,400 @@
+{% extends "base.html" %}
+
+{% block title %}系统设置 - ReedFlow{% endblock %}
+
+{% block extra_css %}
+<style>
+    .tab-content {
+        display: none;
+    }
+    .tab-content.active {
+        display: block;
+    }
+    .nav-tab {
+        position: relative;
+        cursor: pointer;
+    }
+    .nav-tab.active {
+        color: #4f46e5;
+        border-color: #4f46e5;
+    }
+    .nav-tab.active:after {
+        content: '';
+        position: absolute;
+        bottom: -1px;
+        left: 0;
+        right: 0;
+        height: 2px;
+        background-color: #4f46e5;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- <div class="mb-6">
+    <h1 class="text-2xl font-bold text-gray-900">系统设置</h1>
+    <p class="text-gray-500 mt-2">配置系统参数和通知服务</p>
+</div> -->
+<h1 class="text-2xl font-bold text-gray-900"> </h1>
+
+<div class="bg-white shadow rounded-lg overflow-hidden">
+    <!-- 标签页导航 -->
+    <div class="border-b border-gray-200">
+        <nav class="flex -mb-px">
+            <a id="tab-basic" class="nav-tab active py-4 px-6 border-b-2 font-medium text-sm" data-target="basic-settings">
+                基本设置
+            </a>
+            <a id="tab-notification" class="nav-tab py-4 px-6 border-b-2 border-transparent font-medium text-sm text-gray-500 hover:text-gray-700 hover:border-gray-300" data-target="notification-settings">
+                通知设置
+            </a>
+            <a id="tab-log" class="nav-tab py-4 px-6 border-b-2 border-transparent font-medium text-sm text-gray-500 hover:text-gray-700 hover:border-gray-300" data-target="log-settings">
+                日志设置
+            </a>
+        </nav>
+    </div>
+
+    <form id="settingsForm" class="p-6">
+        <!-- 基本设置 -->
+        <div id="basic-settings" class="tab-content active">
+            <h2 class="text-lg font-medium text-gray-900 mb-4 pb-2 border-b">基本设置</h2>
+            
+            <div class="mb-4">
+                <label for="admin_password" class="block text-sm font-medium text-gray-700 mb-1">管理员密码</label>
+                <input type="password" id="admin_password" name="admin_password" value="{{ config.get('admin_password', '') }}" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                <p class="mt-1 text-sm text-gray-500">默认密码为 admin，建议修改</p>
+            </div>
+        </div>
+        
+        <!-- 通知设置 -->
+        <div id="notification-settings" class="tab-content">
+            <div class="mb-4">
+                <h2 class="text-lg font-medium text-gray-900 mb-4 pb-2 border-b">通知服务类型</h2>
+                <div class="mt-2">
+                    <select id="notification_type" name="notification_type" class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                        <option value="email" {% if config.get("notification_type", "") == 'email' %}selected{% endif %}>邮件通知</option>
+                        <option value="wxpusher" {% if config.get("notification_type", "") == 'wxpusher' %}selected{% endif %}>微信推送 (WxPusher)</option>
+                        <option value="pushplus" {% if config.get("notification_type", "") == 'pushplus' %}selected{% endif %}>PushPlus推送</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- 邮件通知设置 -->
+            <div id="email-settings" class="notification-config mb-6" {% if config.get("notification_type", "") != 'email' %}style="display:none"{% endif %}>
+                <h3 class="text-md font-medium text-gray-900 mb-4 pb-2 border-b">邮件通知设置</h3>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="smtp_server" class="block text-sm font-medium text-gray-700 mb-1">SMTP服务器</label>
+                        <input type="text" id="smtp_server" name="smtp_server" value="{{ config.get('email', {}).get('smtp_server', '') }}" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                        <p class="mt-1 text-sm text-gray-500">QQ邮箱推荐使用：smtp.qq.com</p>
+                    </div>
+                    
+                    <div>
+                        <label for="smtp_port" class="block text-sm font-medium text-gray-700 mb-1">SMTP端口</label>
+                        <input type="number" id="smtp_port" name="smtp_port" value="{{ config.get('email', {}).get('smtp_port', 465) }}" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                        <p class="mt-1 text-sm text-gray-500">QQ邮箱推荐使用465(SSL)端口</p>
+                    </div>
+                    
+                    <div>
+                        <label for="smtp_user" class="block text-sm font-medium text-gray-700 mb-1">SMTP用户名</label>
+                        <input type="text" id="smtp_user" name="smtp_user" value="{{ config.get('email', {}).get('smtp_user', '') }}" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                        <p class="mt-1 text-sm text-gray-500">QQ邮箱格式：完整邮箱地址（如123456789@qq.com）</p>
+                    </div>
+                    
+                    <div>
+                        <label for="smtp_password" class="block text-sm font-medium text-gray-700 mb-1">SMTP密码</label>
+                        <input type="password" id="smtp_password" name="smtp_password" value="{{ config.get('email', {}).get('smtp_password', '') }}" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                        <p class="mt-1 text-sm text-gray-500">
+                            <strong>QQ邮箱请填写授权码</strong>，而非QQ密码。
+                            <a href="https://wx.mail.qq.com/list/readtemplate?name=app_intro.html#/agreement/authorizationCode" target="_blank" class="text-indigo-600 hover:text-indigo-800">
+                                获取授权码方法
+                            </a>
+                        </p>
+                    </div>
+                    
+                    <div>
+                        <label for="sender" class="block text-sm font-medium text-gray-700 mb-1">发件人地址</label>
+                        <input type="email" id="sender" name="sender" value="{{ config.get('email', {}).get('sender', '') }}" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                        <p class="mt-1 text-sm text-gray-500">如不填写则使用SMTP用户名作为发件人</p>
+                    </div>
+                    
+                    <div>
+                        <label for="default_recipient" class="block text-sm font-medium text-gray-700 mb-1">默认收件人</label>
+                        <input type="email" id="default_recipient" name="default_recipient" value="{{ config.get('email', {}).get('default_recipient', '') }}" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                        <p class="mt-1 text-sm text-gray-500">系统发送通知邮件时的默认接收者</p>
+                    </div>
+                </div>
+                
+                <div class="mt-4 p-3 bg-blue-50 rounded-md">
+                    <h4 class="text-sm font-medium text-blue-800">QQ邮箱配置提示</h4>
+                    <ul class="mt-2 text-sm text-blue-700 list-disc pl-5 space-y-1">
+                        <li>必须使用SSL连接，端口号465</li>
+                        <li>必须使用QQ邮箱的授权码（而非QQ密码）</li>
+                        <li>如无法发送，请检查是否已在QQ邮箱设置中开启了POP3/SMTP服务</li>
+                        <li>每封测试邮件都会发送到SMTP用户名对应的邮箱，以验证配置是否正确</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <!-- WxPusher设置 -->
+            <div id="wxpusher-settings" class="notification-config mb-6" {% if config.get("notification_type", "") != 'wxpusher' %}style="display:none"{% endif %}>
+                <h3 class="text-md font-medium text-gray-900 mb-4 pb-2 border-b">WxPusher设置</h3>
+                
+                <div>
+                    <label for="app_token" class="block text-sm font-medium text-gray-700 mb-1">AppToken</label>
+                    <input type="text" id="app_token" name="app_token" value="{{ config.get('wxpusher', {}).get('app_token', '') }}" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                    <p class="mt-1 text-sm text-gray-500">从 <a href="https://wxpusher.zjiecode.com/" target="_blank" class="text-indigo-600">WxPusher官网</a> 获取AppToken</p>
+                </div>
+                
+                <div class="mt-4">
+                    <label for="default_uid" class="block text-sm font-medium text-gray-700 mb-1">默认接收者UID</label>
+                    <input type="text" id="default_uid" name="default_uid" value="{{ config.get('wxpusher', {}).get('default_uid', '') }}" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                    <p class="mt-1 text-sm text-gray-500">系统发送微信推送时的默认接收者UID，在"通知服务"模块中不指定接收者时使用</p>
+                </div>
+                
+                <div class="mt-4 p-3 bg-blue-50 rounded-md">
+                    <h4 class="text-sm font-medium text-blue-800">WxPusher使用提示</h4>
+                    <ul class="mt-2 text-sm text-blue-700 list-disc pl-5 space-y-1">
+                        <li>您可以在 <a href="https://wxpusher.zjiecode.com/admin/main/users/list" target="_blank" class="text-indigo-600">WxPusher</a> 管理后台查看关注您应用的用户</li>
+                        <li>获取UID：用户关注您的应用后，会在关注回调中获得UID，或用户可通过公众号菜单找到"我的UID"</li>
+                        <li>WxPusher推送需要用户先关注您创建的应用才能收到消息</li>
+                        <li>单个UID每天最多接收2000条消息，请合理安排发送频率</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- PushPlus设置 -->
+            <div id="pushplus-settings" class="notification-config mb-6" {% if config.get("notification_type", "") != 'pushplus' %}style="display:none"{% endif %}>
+                <h3 class="text-md font-medium text-gray-900 mb-4 pb-2 border-b">PushPlus设置</h3>
+                
+                <div>
+                    <label for="pushplus_token" class="block text-sm font-medium text-gray-700 mb-1">Token</label>
+                    <input type="text" id="pushplus_token" name="pushplus_token" value="{{ config.get('pushplus', {}).get('token', '') }}" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                    <p class="mt-1 text-sm text-gray-500">从 <a href="https://www.pushplus.plus/" target="_blank" class="text-indigo-600">PushPlus官网</a> 获取Token</p>
+                </div>
+                
+                <div class="mt-4">
+                    <label for="pushplus_topic" class="block text-sm font-medium text-gray-700 mb-1">群组编码 (Topic)</label>
+                    <input type="text" id="pushplus_topic" name="pushplus_topic" value="{{ config.get('pushplus', {}).get('topic', '') }}" placeholder="可选，用于群组推送" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                    <p class="mt-1 text-sm text-gray-500">多个接收者时可指定群组编码，不填则为一对一推送</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 日志设置 -->
+        <div id="log-settings" class="tab-content">
+            <h2 class="text-lg font-medium text-gray-900 mb-4 pb-2 border-b">日志设置</h2>
+            
+            <div class="grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-6">
+                <div class="sm:col-span-3">
+                    <label for="log_level" class="block text-sm font-medium text-gray-700">日志级别</label>
+                    <div class="mt-1">
+                        <select id="log_level" name="log_level" class="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md">
+                            <option value="DEBUG" {% if config.get('log_level', 'INFO') == 'DEBUG' %}selected{% endif %}>调试 (DEBUG)</option>
+                            <option value="INFO" {% if config.get('log_level', 'INFO') == 'INFO' %}selected{% endif %}>信息 (INFO)</option>
+                            <option value="WARNING" {% if config.get('log_level', 'INFO') == 'WARNING' %}selected{% endif %}>警告 (WARNING)</option>
+                            <option value="ERROR" {% if config.get('log_level', 'INFO') == 'ERROR' %}selected{% endif %}>错误 (ERROR)</option>
+                        </select>
+                    </div>
+                    <p class="mt-2 text-sm text-gray-500">系统日志记录的级别</p>
+                </div>
+                
+                <div class="sm:col-span-3">
+                    <label for="log_max_entries" class="block text-sm font-medium text-gray-700">日志保留条数</label>
+                    <div class="mt-1">
+                        <input type="number" name="log_max_entries" id="log_max_entries" class="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md" value="{{ config.get('log_max_entries', 10000) }}" min="100" max="100000" step="100">
+                    </div>
+                    <p class="mt-2 text-sm text-gray-500">每种类型日志最多保留的条数（系统日志和工作流日志分别计算）</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="flex justify-end mt-6 pt-4 border-t">
+            <button type="button" id="test-notification-btn" class="mr-3 inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                测试通知
+            </button>
+            <button type="button" onclick="saveSettings()" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                保存设置
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // 标签页切换逻辑
+    document.addEventListener('DOMContentLoaded', function() {
+        const tabs = document.querySelectorAll('.nav-tab');
+        
+        tabs.forEach(tab => {
+            tab.addEventListener('click', function() {
+                // 清除所有标签页和内容区域的激活状态
+                tabs.forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(content => {
+                    content.classList.remove('active');
+                });
+                
+                // 激活当前标签页和相应内容
+                this.classList.add('active');
+                const target = this.getAttribute('data-target');
+                document.getElementById(target).classList.add('active');
+            });
+        });
+
+        // 通知类型切换逻辑
+        const notificationTypeSelect = document.getElementById('notification_type');
+        notificationTypeSelect.addEventListener('change', function() {
+            // 隐藏所有通知配置区域
+            document.querySelectorAll('.notification-config').forEach(config => {
+                config.style.display = 'none';
+            });
+            
+            // 显示选中的通知配置
+            const selectedType = this.value;
+            document.getElementById(`${selectedType}-settings`).style.display = 'block';
+        });
+
+        // 测试通知按钮
+        document.getElementById('test-notification-btn').addEventListener('click', function() {
+            testNotification();
+        });
+    });
+
+    // 测试通知功能
+    async function testNotification() {
+        const notificationType = document.getElementById('notification_type').value;
+        let testData = {};
+
+        // 根据选择的通知类型准备测试数据
+        if (notificationType === 'email') {
+            testData = {
+                type: 'email',
+                config: {
+                    smtp_server: document.getElementById('smtp_server').value,
+                    smtp_port: parseInt(document.getElementById('smtp_port').value) || 465,
+                    smtp_user: document.getElementById('smtp_user').value,
+                    smtp_password: document.getElementById('smtp_password').value,
+                    sender: document.getElementById('sender').value,
+                    default_recipient: document.getElementById('default_recipient').value
+                }
+            };
+        } else if (notificationType === 'wxpusher') {
+            testData = {
+                type: 'wxpusher',
+                config: {
+                    app_token: document.getElementById('app_token').value,
+                    default_uid: document.getElementById('default_uid').value
+                }
+            };
+        } else if (notificationType === 'pushplus') {
+            testData = {
+                type: 'pushplus',
+                config: {
+                    token: document.getElementById('pushplus_token').value,
+                    topic: document.getElementById('pushplus_topic').value
+                }
+            };
+        }
+
+        try {
+            const response = await fetch('/admin/settings/test-notification', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(testData)
+            });
+            
+            const data = await response.json();
+            
+            if (response.ok) {
+                showToast(data.message, "success");
+            } else {
+                showToast(data.message || "测试通知失败", "error");
+            }
+        } catch (error) {
+            showToast("请求出错", "error");
+            console.error(error);
+        }
+    }
+
+    // 保存设置
+    async function saveSettings() {
+        // 获取基本设置
+        const admin_password = document.getElementById('admin_password').value;
+        const log_level = document.getElementById('log_level').value;
+        const log_max_entries = parseInt(document.getElementById('log_max_entries').value) || 10000;
+        
+        // 获取选择的通知类型
+        const notification_type = document.getElementById('notification_type').value;
+        
+        // 构建配置对象
+        let config = {
+            admin_password,
+            log_level,
+            log_max_entries,
+            notification_type
+        };
+        
+        // 根据通知类型添加相应配置
+        if (notification_type === 'email') {
+            config.email = {
+                smtp_server: document.getElementById('smtp_server').value,
+                smtp_port: parseInt(document.getElementById('smtp_port').value) || 465,
+                smtp_user: document.getElementById('smtp_user').value,
+                smtp_password: document.getElementById('smtp_password').value,
+                sender: document.getElementById('sender').value,
+                default_recipient: document.getElementById('default_recipient').value
+            };
+        } else if (notification_type === 'wxpusher') {
+            config.wxpusher = {
+                app_token: document.getElementById('app_token').value,
+                default_uid: document.getElementById('default_uid').value
+            };
+        } else if (notification_type === 'pushplus') {
+            config.pushplus = {
+                token: document.getElementById('pushplus_token').value,
+                topic: document.getElementById('pushplus_topic').value
+            };
+        }
+        
+        try {
+            const response = await fetch('/admin/settings/save', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ config })
+            });
+            
+            const data = await response.json();
+            
+            if (response.ok) {
+                showToast(data.message, "success");
+            } else {
+                showToast(data.message || "保存设置失败", "error");
+            }
+        } catch (error) {
+            showToast("请求出错", "error");
+            console.error(error);
+        }
+    }
+
+    // 显示提示信息
+    function showToast(message, type = "info") {
+        // 创建提示元素
+        const toast = document.createElement('div');
+        toast.className = `fixed bottom-4 right-4 px-4 py-2 rounded-md text-white ${type === 'error' ? 'bg-red-500' : 'bg-green-500'} shadow-lg z-50`;
+        toast.innerHTML = message;
+        
+        // 添加到页面
+        document.body.appendChild(toast);
+        
+        // 自动隐藏
+        setTimeout(() => {
+            toast.remove();
+        }, 3000);
+    }
+</script>
+{% endblock %} 

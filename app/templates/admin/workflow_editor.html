@@ -1,0 +1,2142 @@
+{% extends "base.html" %}
+
+{% block title %}{% if is_new %}新建工作流{% else %}编辑工作流{% endif %} - ReedFlow{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* 工作流画布样式 */
+    #workflow-canvas {
+        position: relative;
+        width: 100%;
+        min-height: 700px;
+        background-color: #f9fafb;
+        border: 1px solid #e5e7eb;
+        border-radius: 0.25rem;
+        overflow: auto;
+    }
+    
+    /* 开关样式 */
+    .toggle-bg {
+        position: relative;
+        width: 3rem;
+        height: 1.5rem;
+        border-radius: 9999px;
+        background-color: #d1d5db;
+        transition: background-color 0.2s ease;
+    }
+    
+    .toggle-bg:before {
+        content: '';
+        position: absolute;
+        width: 1.25rem;
+        height: 1.25rem;
+        left: 0.125rem;
+        bottom: 0.125rem;
+        background-color: white;
+        border-radius: 9999px;
+        transition: transform 0.2s ease;
+        box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    }
+    
+    input:checked + .toggle-bg {
+        background-color: #4f46e5;
+    }
+    
+    input:checked + .toggle-bg:before {
+        transform: translateX(1.5rem);
+    }
+    
+    /* 模块基础样式 */
+    .module {
+        position: absolute;
+        min-width: 200px;
+        background-color: white;
+        border: 1px solid #e5e7eb;
+        border-radius: 0.25rem;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        z-index: 10;
+        cursor: move;
+    }
+    
+    /* 选中模块的样式 */
+    .module.selected {
+        border: 2px solid #3b82f6;
+        box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.3);
+    }
+    
+    /* 模块头部样式 */
+    .module-header {
+        padding: 0.75rem;
+        border-bottom: 1px solid #e5e7eb;
+        background-color: #f3f4f6;
+        border-top-left-radius: 0.25rem;
+        border-top-right-radius: 0.25rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    /* 模块内容样式 */
+    .module-content {
+        padding: 0.75rem;
+    }
+    
+    /* 模块顺序徽章 */
+    .module-order-badge {
+        display: inline-block;
+        background-color: #3b82f6;
+        color: white;
+        width: 24px;
+        height: 24px;
+        line-height: 24px;
+        text-align: center;
+        border-radius: 50%;
+        font-size: 0.75rem;
+        margin-right: 0.5rem;
+    }
+    
+    /* 连接线容器 */
+    #connections-container {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+    }
+    
+    /* 连接线样式 */
+    .connection-path {
+        fill: none;
+        stroke: #9ca3af;
+        stroke-width: 2;
+        stroke-dasharray: none;
+    }
+    
+    /* 临时连接线样式 */
+    .temp-connection-path {
+        stroke-dasharray: 5;
+        animation: dash 1s linear infinite;
+    }
+    
+    /* 箭头样式 */
+    .connection-arrow {
+        fill: #9ca3af;
+    }
+    
+    /* 连接点基础样式 */
+    .connection-point {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        border: 2px solid #9ca3af;
+        background-color: white;
+        cursor: pointer;
+    }
+    
+    /* 输入输出连接点 */
+    .connection-point.input {
+        position: absolute;
+        top: 0;
+        left: 50%;
+        transform: translate(-50%, -50%);
+    }
+    
+    .connection-point.output {
+        position: absolute;
+        bottom: 0;
+        left: 50%;
+        transform: translate(-50%, 50%);
+    }
+    
+    /* 分支输出连接点 */
+    .branch-outputs {
+        display: flex;
+        justify-content: space-between;
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        transform: translateY(50%);
+    }
+    
+    .branch-output {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        border: 2px solid #9ca3af;
+        background-color: white;
+        cursor: pointer;
+    }
+    
+    .branch-output[data-branch="true"] {
+        border-color: #10b981;
+        margin-left: 25%;
+    }
+    
+    .branch-output[data-branch="false"] {
+        border-color: #ef4444;
+        margin-right: 25%;
+    }
+    
+    /* 活动连接点样式 */
+    .connection-point.active, .branch-output.active {
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.4);
+        animation: pulse 1.5s infinite;
+    }
+    
+    /* 模块工具条 */
+    .module-toolbar {
+        padding: 0.5rem;
+        background-color: #f3f4f6;
+        border-radius: 0.25rem;
+        margin-bottom: 1rem;
+    }
+    
+    /* 模块模板 */
+    .module-template {
+        display: inline-block;
+        padding: 0.5rem;
+        margin-right: 0.5rem;
+        margin-bottom: 0.5rem;
+        background-color: white;
+        border: 1px solid #e5e7eb;
+        border-radius: 0.25rem;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    
+    .module-template:hover {
+        background-color: #f3f4f6;
+        border-color: #d1d5db;
+    }
+    
+    /* 动画效果 */
+    @keyframes pulse {
+        0% {
+            box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7);
+        }
+        70% {
+            box-shadow: 0 0 0 6px rgba(59, 130, 246, 0);
+        }
+        100% {
+            box-shadow: 0 0 0 0 rgba(59, 130, 246, 0);
+        }
+    }
+    
+    @keyframes dash {
+        to {
+            stroke-dashoffset: 20;
+        }
+    }
+
+    /* 自定义滚动条样式 */
+    #module-container::-webkit-scrollbar {
+        width: 8px;
+    }
+    
+    #module-container::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 4px;
+    }
+    
+    #module-container::-webkit-scrollbar-thumb {
+        background: #cbd5e0;
+        border-radius: 4px;
+    }
+    
+    #module-container::-webkit-scrollbar-thumb:hover {
+        background: #a0aec0;
+    }
+    
+    /* 左侧模块列表固定高度 */
+    .draggable-modules {
+        height: 700px;
+        display: flex;
+        flex-direction: column;
+    }
+    
+    #module-container {
+        flex: 1;
+        overflow-y: auto;
+        overflow-x: hidden;
+        height: calc(100% - 100px); /* 减去标题和分类导航的高度 */
+        scrollbar-width: thin;
+        scrollbar-color: #cbd5e0 #f1f1f1;
+    }
+    
+    /* 变量列表样式 */
+    #variables-container {
+        position: relative;
+        width: 100%;
+        background-color: white;
+        border-top: 1px solid #e5e7eb;
+        padding: 12px;
+        margin-top: 10px;
+    }
+    
+    .variable-item {
+        display: inline-block;
+        margin-right: 8px;
+        margin-bottom: 8px;
+        padding: 4px 8px;
+        background-color: #f3f4f6;
+        border: 1px solid #e5e7eb;
+        border-radius: 4px;
+        font-size: 0.85rem;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    
+    .variable-item:hover {
+        background-color: #e5e7eb;
+        border-color: #d1d5db;
+    }
+    
+    .variable-item.copied {
+        background-color: #dcfce7;
+        border-color: #86efac;
+    }
+
+    /* 右侧模块配置面板 */
+    .module-config-panel {
+        position: sticky;
+        top: 20px;
+        max-height: calc(100vh - 40px);
+        overflow-y: auto;
+    }
+    
+    /* 自定义滚动条样式 */
+    .module-config-panel::-webkit-scrollbar {
+        width: 8px;
+    }
+    
+    .module-config-panel::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 4px;
+    }
+    
+    .module-config-panel::-webkit-scrollbar-thumb {
+        background: #cbd5e0;
+        border-radius: 4px;
+    }
+    
+    .module-config-panel::-webkit-scrollbar-thumb:hover {
+        background: #a0aec0;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="grid grid-cols-12 gap-4 h-full">
+    <!-- 左侧模块列表 -->
+    <div class="col-span-3 bg-white rounded-lg shadow-sm p-4 border border-gray-200 overflow-y-auto">
+        <h2 class="text-lg font-medium text-gray-900 mb-3">模块列表</h2>
+        
+        <!-- 模块分类标签 -->
+        <div class="border-b border-gray-200 mb-3">
+            <nav class="flex flex-wrap -mb-px">
+                <button class="mr-4 py-2 px-1 font-medium text-sm border-b-2 border-transparent hover:text-indigo-600 hover:border-indigo-500 category-tab" data-category="all">
+                    全部
+                </button>
+                <button class="mr-4 py-2 px-1 font-medium text-sm border-b-2 border-transparent hover:text-indigo-600 hover:border-indigo-500 category-tab" data-category="text">
+                    文本处理
+                </button>
+                <button class="mr-4 py-2 px-1 font-medium text-sm border-b-2 border-transparent hover:text-indigo-600 hover:border-indigo-500 category-tab" data-category="network">
+                    网络请求
+                </button>
+                <button class="mr-4 py-2 px-1 font-medium text-sm border-b-2 border-transparent hover:text-indigo-600 hover:border-indigo-500 category-tab" data-category="data">
+                    数据处理
+                </button>
+            </nav>
+        </div>
+        
+        <!-- 模块列表 -->
+        <div class="module-list space-y-3" id="module-container">
+            {% for type_key, module_type in module_types.items() %}
+            <div class="draggable-module bg-white border border-gray-200 rounded-md shadow-sm cursor-move hover:shadow-md hover:border-indigo-300 transition-all duration-200 overflow-hidden" 
+                 draggable="true" 
+                 data-type="{{ type_key }}" 
+                 data-category="{{ module_type.category|default('text') }}">
+                <div class="bg-gradient-to-r {{ 'from-blue-50 to-indigo-50' if module_type.category == 'text' else 'from-green-50 to-teal-50' if module_type.category == 'network' else 'from-purple-50 to-pink-50' if module_type.category == 'data' else 'from-gray-50 to-gray-100' }} px-3 py-2 border-b border-gray-100">
+                    <div class="flex items-center">
+                        <div class="w-8 h-8 flex-shrink-0 flex items-center justify-center {{ 'bg-blue-100 text-blue-600' if module_type.category == 'text' else 'bg-green-100 text-green-600' if module_type.category == 'network' else 'bg-purple-100 text-purple-600' if module_type.category == 'data' else 'bg-gray-100 text-gray-600' }} rounded-md mr-2">
+                            <i class="bi bi-{{ module_type.icon }}"></i>
+                        </div>
+                        <div>
+                            <div class="font-medium text-sm {{ 'text-blue-900' if module_type.category == 'text' else 'text-green-900' if module_type.category == 'network' else 'text-purple-900' if module_type.category == 'data' else 'text-gray-900' }}">{{ module_type.name }}</div>
+                            <div class="text-xs text-gray-500 line-clamp-1" title="{{ module_type.description }}">{{ module_type.description }}</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="px-3 py-1.5 flex justify-between items-center">
+                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium {{ 'bg-blue-100 text-blue-800' if module_type.category == 'text' else 'bg-green-100 text-green-800' if module_type.category == 'network' else 'bg-purple-100 text-purple-800' if module_type.category == 'data' else 'bg-gray-100 text-gray-800' }}">
+                        <i class="bi bi-{{ 'type' if module_type.category == 'text' else 'globe' if module_type.category == 'network' else 'database' if module_type.category == 'data' else 'gear' }} mr-1"></i>
+                        {{ 
+                            '文本处理' if module_type.category == 'text' else 
+                            '网络请求' if module_type.category == 'network' else 
+                            '数据处理' if module_type.category == 'data' else 
+                            '其他'
+                        }}
+                    </span>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    
+    <!-- 中间画布 -->
+    <div class="col-span-6 h-full">
+        <div class="bg-white rounded-lg shadow-sm p-4 border border-gray-200 mb-4 flex justify-between items-center">
+            <div>
+                <h2 class="text-lg font-medium text-gray-900">{% if is_new %}新建工作流{% else %}编辑工作流{% endif %}</h2>
+                <p class="text-sm text-gray-500">拖拽左侧模块到画布设计工作流</p>
+            </div>
+            <div class="flex space-x-2">
+                <button id="btn-save-workflow" class="px-3 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm">
+                    <i class="bi bi-save mr-1"></i> 保存工作流
+                </button>
+            </div>
+        </div>
+        
+        <div class="bg-white rounded-lg shadow-sm p-4 border border-gray-200 mb-4">
+            <div class="grid grid-cols-2 gap-4">
+                <div class="col-span-2 sm:col-span-1">
+                    <label for="workflow-name" class="block text-sm font-medium text-gray-700">工作流名称</label>
+                    <input type="text" id="workflow-name" value="{{ workflow.name|default('') }}" class="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500">
+                </div>
+                <div class="col-span-2 sm:col-span-1">
+                    <label for="workflow-cron" class="block text-sm font-medium text-gray-700">定时执行 (CRON表达式)</label>
+                    <input type="text" id="workflow-cron" value="{{ workflow.cron|default('') }}" class="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500" placeholder="*/10 * * * *">
+                    <p class="mt-1 text-xs text-gray-500">格式: 分 时 日 月 周，如 */10 * * * * 表示每10分钟执行一次</p>
+                </div>
+                <div class="col-span-2 sm:col-span-1 flex items-center">
+                    <div class="flex items-center justify-between w-full">
+                        <label for="workflow-enabled" class="text-sm font-medium text-gray-700">启用工作流</label>
+                        <div class="relative inline-block w-12 mr-2 align-middle select-none">
+                            <input 
+                                type="checkbox" 
+                                id="workflow-enabled" 
+                                {% if workflow.enabled %}checked{% endif %} 
+                                class="sr-only"
+                            />
+                            <div class="toggle-bg block h-6 rounded-full bg-gray-300 cursor-pointer transition-colors duration-200 ease-in-out"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-span-2">
+                    <label for="workflow-description" class="block text-sm font-medium text-gray-700">工作流描述</label>
+                    <textarea id="workflow-description" rows="2" class="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500">{{ workflow.description|default('') }}</textarea>
+                </div>
+            </div>
+        </div>
+        
+        <div id="workflow-canvas" class="relative bg-gray-50 rounded-lg shadow-inner border border-gray-200">
+            <!-- 连接线容器 -->
+            <svg id="connections-container" class="absolute inset-0 w-full h-full pointer-events-none" xmlns="http://www.w3.org/2000/svg"></svg>
+            
+            <!-- 模块将被添加到这里 -->
+        </div>
+    </div>
+    
+    <!-- 右侧配置 -->
+    <div class="col-span-3 bg-white rounded-lg shadow-sm p-4 border border-gray-200">
+        <div class="module-config-panel">
+            <h2 class="text-lg font-medium text-gray-900 mb-3">模块配置</h2>
+            <div id="module-config">
+                <p class="text-gray-500 text-center py-10">请选择一个模块进行配置</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 变量列表区域 -->
+<div id="variables-list-container" class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-md z-20 px-4 py-2" style="max-height: 200px; overflow-y: auto;">
+    <div class="flex justify-between items-center mb-2">
+        <h3 class="text-sm font-medium text-gray-700">工作流变量</h3>
+        <button id="toggle-variables-list" class="text-xs text-gray-500 hover:text-gray-700 focus:outline-none">
+            <i class="bi bi-chevron-up"></i>
+        </button>
+    </div>
+    <div id="variables-list" class="flex flex-wrap gap-2">
+        <span class="text-gray-500 text-xs">暂无变量</span>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // 工作流数据
+    let workflow = {{ workflow|tojson }};
+    // 模块类型定义
+    const moduleTypes = {{ module_types|tojson }};
+    // 当前选中的模块ID
+    let selectedModuleId = null;
+    
+    // 连接创建变量
+    let connectionStartModule = null;
+    let connectionStartPoint = null;
+    let connectionStartBranch = null;
+    let tempConnectionPath = null;
+    
+    // 工作流变量列表
+    let workflowVariables = [];
+    
+    // 页面加载完成后初始化
+    document.addEventListener('DOMContentLoaded', function() {
+        // 初始化拖放功能
+        initDragAndDrop();
+        
+        // 初始化画布拖动功能
+        initCanvasDrag();
+        
+        // 初始化模块分类功能
+        initModuleCategories();
+        
+        // 确保工作流启用状态正确显示
+        const enabledCheckbox = document.getElementById('workflow-enabled');
+        if (enabledCheckbox) {
+            // 初始化开关状态
+            updateToggleState(enabledCheckbox, workflow.enabled);
+            
+            // 添加状态变化监听
+            enabledCheckbox.addEventListener('change', function() {
+                updateToggleState(this, this.checked);
+            });
+        }
+        
+        // 如果工作流模块未定义connections字段，初始化它
+        if (!workflow.connections) {
+            workflow.connections = [];
+        }
+        
+        // 处理导入的工作流，确保连接正确恢复
+        processImportedWorkflow();
+        
+        // 绑定保存工作流按钮点击事件
+        document.getElementById('btn-save-workflow').addEventListener('click', saveWorkflow);
+        
+        // 渲染已有的模块
+        if(workflow.modules && workflow.modules.length > 0) {
+            // 首先确保所有模块有正确的位置信息
+            workflow.modules.forEach((module, index) => {
+                if (!module.position || (module.position.x === undefined || module.position.y === undefined)) {
+                    console.log("初始化模块位置:", module.id);
+                    module.position = { x: 100, y: 100 + (index * 100) };
+                }
+            });
+            
+            // 渲染所有模块
+            workflow.modules.forEach(module => {
+                createModuleElement(module);
+            });
+            
+            // 更新执行顺序
+            updateModuleOrderDisplay();
+        }
+        
+        // 渲染连接线
+        if(workflow.connections && workflow.connections.length > 0) {
+            // 确保连接的sourceHandle和targetHandle字段
+            workflow.connections.forEach(conn => {
+                if (!conn.sourceHandle) {
+                    console.log("初始化连接源端点:", conn.id);
+                    if (conn.type === 'condition_true' || conn.sourceBranch === 'true') {
+                        conn.sourceHandle = 'output_true';
+                    } else if (conn.type === 'condition_false' || conn.sourceBranch === 'false') {
+                        conn.sourceHandle = 'output_false';
+                    } else {
+                        conn.sourceHandle = 'output';
+                    }
+                }
+                
+                if (!conn.targetHandle) {
+                    console.log("初始化连接目标端点:", conn.id);
+                    conn.targetHandle = 'input';
+                }
+            });
+            
+            // 更新连接线
+            updateConnections();
+        }
+        
+        // 初始化变量列表
+        initVariablesList();
+        
+        // 绑定变量列表展开/收起事件
+        document.getElementById('toggle-variables-list').addEventListener('click', function() {
+            const container = document.getElementById('variables-list-container');
+            const icon = this.querySelector('i');
+            
+            if (container.style.height === '30px') {
+                container.style.height = 'auto';
+                icon.className = 'fas fa-chevron-up';
+            } else {
+                container.style.height = '30px';
+                icon.className = 'fas fa-chevron-down';
+            }
+        });
+        
+        // 点击画布空白处取消选择
+        document.getElementById('workflow-canvas').addEventListener('click', function(e) {
+            if (e.target === this || e.target.id === 'connections-container') {
+                if (selectedModuleId) {
+                    document.getElementById(selectedModuleId)?.classList.remove('active');
+                    selectedModuleId = null;
+                    document.getElementById('module-config').innerHTML = '<p class="text-gray-500 text-center py-10">请选择一个模块进行配置</p>';
+                }
+                // 取消任何连接创建状态
+                cancelConnectionCreation();
+            }
+        });
+    });
+    
+    // 初始化画布拖动功能
+    function initCanvasDrag() {
+        const canvas = document.getElementById('workflow-canvas');
+        let isDragging = false;
+        let startX, startY;
+        let scrollLeft, scrollTop;
+        
+        // 设置画布初始高度
+        canvas.style.height = '700px';
+        
+        canvas.addEventListener('mousedown', function(e) {
+            // 只有在点击画布空白区域时才启用拖动
+            if (e.target === canvas || e.target.id === 'connections-container') {
+                isDragging = true;
+                startX = e.pageX;
+                startY = e.pageY;
+                scrollLeft = canvas.scrollLeft;
+                scrollTop = canvas.scrollTop;
+                
+                // 改变光标样式
+                canvas.style.cursor = 'grabbing';
+                e.preventDefault();
+            }
+        });
+        
+        document.addEventListener('mousemove', function(e) {
+            if (!isDragging) return;
+            
+            const dx = e.pageX - startX;
+            const dy = e.pageY - startY;
+            
+            // 计算新的滚动位置
+            canvas.scrollLeft = scrollLeft - dx;
+            canvas.scrollTop = scrollTop - dy;
+            
+            // 检查模块位置，如果有模块接近底部，则扩展画布
+            checkModulesPositionAndExtendCanvas();
+        });
+        
+        document.addEventListener('mouseup', function() {
+            if (isDragging) {
+                isDragging = false;
+                canvas.style.cursor = 'default';
+            }
+        });
+        
+        // 防止鼠标离开窗口后依然保持拖动状态
+        document.addEventListener('mouseleave', function() {
+            if (isDragging) {
+                isDragging = false;
+                canvas.style.cursor = 'default';
+            }
+        });
+    }
+    
+    // 检查模块位置并扩展画布
+    function checkModulesPositionAndExtendCanvas() {
+        const canvas = document.getElementById('workflow-canvas');
+        const modules = document.querySelectorAll('.module');
+        const canvasHeight = parseInt(canvas.style.height) || 700;
+        
+        // 计算所有模块中位置最低的模块的底部位置
+        let lowestModuleBottom = 0;
+        
+        modules.forEach(module => {
+            const moduleBottom = module.offsetTop + module.offsetHeight;
+            lowestModuleBottom = Math.max(lowestModuleBottom, moduleBottom);
+        });
+        
+        // 如果最低模块距离画布底部不足100px，扩展画布
+        if (lowestModuleBottom > canvasHeight - 200) {
+            canvas.style.height = (canvasHeight + 300) + 'px';
+            
+            // 更新SVG容器的大小
+            const svgContainer = document.getElementById('connections-container');
+            svgContainer.setAttribute('height', '100%');
+        }
+    }
+
+    
+    // 初始化模块分类功能
+    function initModuleCategories() {
+        const tabs = document.querySelectorAll('.category-tab');
+        const moduleItems = document.querySelectorAll('.draggable-module');
+        
+        // 根据模块类型定义中的category属性设置模块的分类
+        moduleItems.forEach(item => {
+            const moduleType = item.getAttribute('data-type');
+            if (moduleType && moduleTypes[moduleType]) {
+                item.setAttribute('data-category', moduleTypes[moduleType].category || 'text');
+            }
+            
+            // 添加过渡样式
+            item.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+        });
+        
+        tabs.forEach(tab => {
+            tab.addEventListener('click', function() {
+                // 切换标签激活状态
+                tabs.forEach(t => t.classList.remove('text-indigo-600', 'border-indigo-500', 'border-b-2'));
+                tab.classList.add('text-indigo-600', 'border-indigo-500', 'border-b-2');
+                
+                const selectedCategory = tab.getAttribute('data-category');
+                
+                // 显示或隐藏模块并添加过渡动画
+                moduleItems.forEach(item => {
+                    const itemCategory = item.getAttribute('data-category');
+                    if (selectedCategory === 'all' || itemCategory === selectedCategory) {
+                        item.style.display = '';
+                        setTimeout(() => {
+                            item.style.opacity = '1';
+                            item.style.transform = 'translateY(0)';
+                        }, 10);
+                    } else {
+                        item.style.opacity = '0';
+                        item.style.transform = 'translateY(10px)';
+                        setTimeout(() => {
+                            item.style.display = 'none';
+                        }, 300);
+                    }
+                });
+            });
+        });
+        
+        // 设置初始不透明度
+        moduleItems.forEach(item => {
+            item.style.opacity = '0';
+            item.style.transform = 'translateY(10px)';
+        });
+        
+        // 初始化显示所有模块
+        tabs[0].click();
+    }
+    
+    // 初始化拖放功能
+    function initDragAndDrop() {
+        // 获取可拖动模块元素
+        const draggableModules = document.querySelectorAll('.draggable-module');
+        const canvas = document.getElementById('workflow-canvas');
+        
+        // 为每个可拖动模块添加事件监听器
+        draggableModules.forEach(module => {
+            module.addEventListener('dragstart', function(e) {
+                e.dataTransfer.setData('moduleType', this.getAttribute('data-type'));
+            });
+        });
+        
+        // 为画布添加放置相关事件
+        canvas.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'copy';
+        });
+        
+        canvas.addEventListener('drop', function(e) {
+            e.preventDefault();
+            const moduleType = e.dataTransfer.getData('moduleType');
+            
+            if (moduleType) {
+                // 获取相对于画布的位置
+                const rect = canvas.getBoundingClientRect();
+                const x = e.clientX - rect.left + canvas.scrollLeft;
+                const y = e.clientY - rect.top + canvas.scrollTop;
+                
+                // 添加新模块
+                addModule(moduleType, x, y);
+            }
+        });
+    }
+    
+    // 获取下一个可用的执行顺序
+    function getNextAvailableOrder() {
+        if (!workflow.modules || workflow.modules.length === 0) {
+            return 1;
+        }
+        
+        const orders = workflow.modules.map(m => m.order || 0);
+        return Math.max(...orders) + 1;
+    }
+    
+    // 更新所有模块的执行顺序显示
+    function updateModuleOrderDisplay() {
+        // 首先获取所有连接关系
+        const moduleConnections = {};
+        
+        // 初始化连接关系映射
+        workflow.modules.forEach(module => {
+            moduleConnections[module.id] = {
+                parents: [],
+                children: [],
+                order: module.order || 0,
+                processed: false
+            };
+        });
+        
+        // 建立连接关系
+        workflow.connections.forEach(conn => {
+            if (moduleConnections[conn.source]) {
+                moduleConnections[conn.source].children.push({
+                    id: conn.target,
+                    branch: conn.sourceBranch
+                });
+            }
+            
+            if (moduleConnections[conn.target]) {
+                moduleConnections[conn.target].parents.push({
+                    id: conn.source,
+                    branch: conn.sourceBranch
+                });
+            }
+        });
+        
+        // 递归设置分支内的模块序号
+        function processModuleBranch(moduleId, parentInfo = null, branchPrefix = null) {
+            const moduleInfo = moduleConnections[moduleId];
+            if (!moduleInfo || moduleInfo.processed) return;
+            
+            const module = workflow.modules.find(m => m.id === moduleId);
+            if (!module) return;
+            
+            // 标记为已处理
+            moduleInfo.processed = true;
+            
+            // 如果有父模块和分支信息，设置子序号
+            if (parentInfo && branchPrefix) {
+                module.subOrder = branchPrefix + module.order;
+            } else {
+                module.subOrder = null;
+            }
+            
+            // 处理子模块
+            moduleInfo.children.forEach(child => {
+                const childModule = workflow.modules.find(m => m.id === child.id);
+                if (!childModule) return;
+                
+                // 如果当前模块是条件模块，根据分支给子模块设置前缀
+                if (module.type === 'condition' && child.branch) {
+                    const newPrefix = `${module.order}.${child.branch === 'true' ? '1' : '2'}`;
+                    processModuleBranch(child.id, { id: moduleId, type: module.type }, newPrefix);
+                }
+                // 如果当前模块在分支中，将分支前缀传递给子模块
+                else if (branchPrefix) {
+                    processModuleBranch(child.id, { id: moduleId, type: module.type }, branchPrefix);
+                }
+                else {
+                    processModuleBranch(child.id);
+                }
+            });
+        }
+        
+        // 从没有父节点的模块开始处理（通常是第一个模块）
+        workflow.modules.forEach(module => {
+            const moduleInfo = moduleConnections[module.id];
+            if (moduleInfo && moduleInfo.parents.length === 0 && !moduleInfo.processed) {
+                processModuleBranch(module.id);
+            }
+        });
+        
+        // 如果有些模块没有处理到（孤立的模块），也进行处理
+        workflow.modules.forEach(module => {
+            const moduleInfo = moduleConnections[module.id];
+            if (moduleInfo && !moduleInfo.processed) {
+                processModuleBranch(module.id);
+            }
+        });
+        
+        // 更新DOM中的序号显示
+        workflow.modules.forEach(module => {
+            const moduleEl = document.getElementById(module.id);
+            if (moduleEl) {
+                const orderBadge = moduleEl.querySelector('.module-order-badge');
+                if (orderBadge) {
+                    orderBadge.textContent = module.subOrder || module.order || 0;
+                }
+            }
+        });
+    }
+    
+    // 添加模块到工作流
+    function addModule(moduleType, x, y) {
+        const moduleTypeInfo = moduleTypes[moduleType];
+        if (!moduleTypeInfo) return;
+        
+        // 创建唯一ID
+        const moduleId = 'module_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+        
+        // 创建模块对象
+        const moduleObj = {
+            id: moduleId,
+            type: moduleType,
+            name: moduleTypeInfo.name,
+            config: {},
+            position: { x, y },
+            order: getNextAvailableOrder()
+        };
+        
+        // 添加到工作流
+        workflow.modules.push(moduleObj);
+        
+        // 创建DOM并添加到画布
+        createModuleElement(moduleObj);
+        
+        // 更新变量列表
+        updateVariablesList();
+    }
+    
+    // 拖拽元素
+    function dragElement(element) {
+        let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
+        
+        // 确保元素有ID
+        if (!element.id) {
+            element.id = `module-${Date.now()}`;
+        }
+        
+        const moduleHeader = element.querySelector(".module-header");
+        
+        if (moduleHeader) {
+            // 如果有header，则通过header拖拽
+            moduleHeader.onmousedown = dragMouseDown;
+        } else {
+            // 否则通过整个元素拖拽
+            element.onmousedown = dragMouseDown;
+        }
+        
+        function dragMouseDown(e) {
+            e = e || window.event;
+            e.preventDefault();
+            
+            // 检查是否点击了按钮或图标等特殊元素，如果是则不启动拖拽
+            const target = e.target;
+            if (target.tagName === 'BUTTON' || 
+                target.tagName === 'I' || 
+                target.tagName === 'INPUT' || 
+                target.tagName === 'SELECT' || 
+                target.classList.contains('connection-point') ||
+                target.classList.contains('branch-output') ||
+                target.closest('.module-controls')) {
+                return;
+            }
+            
+            // 获取鼠标位置
+            pos3 = e.clientX;
+            pos4 = e.clientY;
+            
+            // 选中当前模块
+            selectModule(element.id);
+            
+            document.onmouseup = closeDragElement;
+            document.onmousemove = elementDrag;
+        }
+        
+        function elementDrag(e) {
+            e = e || window.event;
+            e.preventDefault();
+            
+            // 计算新位置
+            pos1 = pos3 - e.clientX;
+            pos2 = pos4 - e.clientY;
+            pos3 = e.clientX;
+            pos4 = e.clientY;
+            
+            // 获取canvas元素和当前滚动位置
+            const canvas = document.getElementById('workflow-canvas');
+            const canvasRect = canvas.getBoundingClientRect();
+            
+            // 计算新的top和left位置
+            let newTop = element.offsetTop - pos2;
+            let newLeft = element.offsetLeft - pos1;
+            
+            // 限制模块在画布区域内
+            const moduleWidth = element.offsetWidth;
+            const moduleHeight = element.offsetHeight;
+            
+            // 设置最小边界为0（左上角）
+            newLeft = Math.max(0, newLeft);
+            newTop = Math.max(0, newTop);
+            
+            // 设置最大边界为画布大小减去模块大小（右下角）
+            newLeft = Math.min(canvas.scrollWidth - moduleWidth, newLeft);
+            newTop = Math.min(canvas.scrollHeight - moduleHeight, newTop);
+            
+            // 设置元素的新位置
+            element.style.top = newTop + "px";
+            element.style.left = newLeft + "px";
+            
+            // 更新工作流中的模块位置
+            const moduleId = element.id;
+            const moduleIndex = workflow.modules.findIndex(m => m.id === moduleId);
+            
+            if (moduleIndex !== -1) {
+                workflow.modules[moduleIndex].position = { x: newLeft, y: newTop };
+            }
+            
+            // 实时更新连接线
+            updateConnections();
+        }
+        
+        function closeDragElement() {
+            // 停止拖拽
+            document.onmouseup = null;
+            document.onmousemove = null;
+            
+            // 更新变量列表
+            updateVariablesList();
+        }
+    }
+    
+    // 选择模块进行配置
+    function selectModule(moduleId) {
+        // 清除之前选中的模块
+        if (selectedModuleId) {
+            document.getElementById(selectedModuleId)?.classList.remove('active');
+        }
+        
+        selectedModuleId = moduleId;
+        const moduleEl = document.getElementById(moduleId);
+        if (moduleEl) {
+            moduleEl.classList.add('active');
+        }
+        
+        // 查找模块
+        const module = workflow.modules.find(m => m.id === moduleId);
+        if (!module) return;
+        
+        // 获取模块类型信息
+        const moduleTypeInfo = moduleTypes[module.type];
+        if (!moduleTypeInfo) return;
+        
+        // 生成配置表单
+        let configHTML = `
+            <h3 class="text-md font-medium text-gray-900 mb-4">${moduleTypeInfo.name} 配置</h3>
+            
+            <div class="mb-4">
+                <label for="config_order" class="block text-sm font-medium text-gray-700">执行顺序</label>
+                <input type="number" id="config_order" value="${module.order || 0}" min="0" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+            </div>
+        `;
+        
+        moduleTypeInfo.config_fields.forEach(field => {
+            const fieldValue = module.config[field.name] || field.default || '';
+            
+            let inputHTML = '';
+            if (field.type === 'select') {
+                inputHTML = `<select id="config_${field.name}" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">`;
+                
+                field.options.forEach(option => {
+                    const selected = option === fieldValue ? 'selected' : '';
+                    inputHTML += `<option value="${option}" ${selected}>${option}</option>`;
+                });
+                
+                inputHTML += `</select>`;
+            } else if (field.type === 'textarea') {
+                inputHTML = `<textarea id="config_${field.name}" rows="3" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" placeholder="${field.placeholder || ''}">${fieldValue}</textarea>`;
+            } else if (field.type === 'checkbox') {
+                // 对于checkbox类型，将勾选框放在标签右侧
+                configHTML += `
+                    <div class="mb-4 flex items-center justify-between">
+                        <label for="config_${field.name}" class="text-sm font-medium text-gray-700">${field.label}</label>
+                        <input type="checkbox" id="config_${field.name}" ${fieldValue ? 'checked' : ''} class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded">
+                    </div>
+                `;
+                return; // 跳过下面的通用处理
+            } else {
+                inputHTML = `<input type="${field.type === 'json' ? 'text' : field.type}" id="config_${field.name}" value="${fieldValue}" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" placeholder="${field.placeholder || ''}">`;
+            }
+            
+            configHTML += `
+                <div class="mb-4">
+                    <label for="config_${field.name}" class="block text-sm font-medium text-gray-700">${field.label}</label>
+                    ${inputHTML}
+                </div>
+            `;
+        });
+        
+        configHTML += `
+            <div class="mt-6">
+                <button onclick="applyModuleConfig()" class="w-full inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                    应用配置
+                </button>
+            </div>
+        `;
+        
+        // 显示配置表单
+        document.getElementById('module-config').innerHTML = configHTML;
+    }
+    
+    // 应用模块配置
+    function applyModuleConfig() {
+        if (!selectedModuleId) return;
+        
+        // 查找模块
+        const module = workflow.modules.find(m => m.id === selectedModuleId);
+        if (!module) return;
+        
+        // 获取模块类型信息
+        const moduleTypeInfo = moduleTypes[module.type];
+        if (!moduleTypeInfo) return;
+        
+        // 获取执行顺序
+        const orderElement = document.getElementById('config_order');
+        if (orderElement) {
+            module.order = parseInt(orderElement.value) || 0;
+        }
+        
+        // 获取表单值
+        const config = {};
+        moduleTypeInfo.config_fields.forEach(field => {
+            const element = document.getElementById(`config_${field.name}`);
+            if (element) {
+                if (field.type === 'checkbox') {
+                    config[field.name] = element.checked;
+                } else {
+                    config[field.name] = element.value;
+                }
+            }
+        });
+        
+        // 更新模块配置
+        module.config = config;
+        
+        // 重新创建模块元素以更新显示
+        const moduleElement = document.getElementById(selectedModuleId);
+        if (moduleElement) {
+            // 保存当前位置
+            const position = { 
+                x: parseInt(moduleElement.style.left) || 0, 
+                y: parseInt(moduleElement.style.top) || 0 
+            };
+            
+            // 从DOM中移除旧元素
+            moduleElement.remove();
+            
+            // 确保位置信息保持一致
+            module.position = position;
+            
+            // 重新创建模块元素
+            createModuleElement(module);
+        }
+        
+        // 更新执行顺序显示
+        updateModuleOrderDisplay();
+        
+        // 更新变量列表，因为配置可能影响变量
+        updateVariablesList();
+        
+        // 提示成功
+        showToast("配置已应用", "success");
+    }
+    
+    // 删除模块
+    function removeModule(moduleId) {
+        if (!moduleId) return;
+        
+        // 从DOM中移除模块
+        const moduleElement = document.getElementById(moduleId);
+        if (moduleElement) {
+            moduleElement.remove();
+        }
+        
+        // 从工作流中移除模块
+        const moduleIndex = workflow.modules.findIndex(module => module.id === moduleId);
+        if (moduleIndex >= 0) {
+            workflow.modules.splice(moduleIndex, 1);
+        }
+        
+        // 删除与此模块相关的所有连接
+        workflow.connections = workflow.connections.filter(conn => {
+            return conn.source !== moduleId && conn.target !== moduleId;
+        });
+        
+        // 更新连接线视图
+        updateConnections();
+        
+        // 如果删除的是选中的模块，清除选中状态
+        if (selectedModuleId === moduleId) {
+            selectedModuleId = null;
+            document.getElementById('module-config').innerHTML = '<p class="text-gray-500 text-center py-10">请选择一个模块进行配置</p>';
+        }
+        
+        // 更新变量列表
+        updateVariablesList();
+        
+        // 提示成功
+        showToast('模块已删除', 'success');
+    }
+    
+    // 更新选中状态UI
+    function updateSelectionUI() {
+        if (!selectedModuleId) {
+            document.getElementById('module-config').innerHTML = '<p class="text-gray-500 text-center py-10">请选择一个模块进行配置</p>';
+        }
+    }
+    
+    // 保存工作流
+    async function saveWorkflow() {
+        // 获取基本信息
+        const name = document.getElementById('workflow-name').value.trim();
+        const description = document.getElementById('workflow-description').value.trim();
+        const cron = document.getElementById('workflow-cron').value.trim();
+        const enabled = document.getElementById('workflow-enabled').checked;
+        
+        if (!name) {
+            showToast("工作流名称不能为空", "error");
+            return;
+        }
+        
+        // 更新工作流信息
+        workflow.name = name;
+        workflow.description = description;
+        workflow.cron = cron;
+        workflow.enabled = enabled;
+        
+        // 确保所有模块都有执行顺序
+        workflow.modules.forEach((module, index) => {
+            if (!module.order && module.order !== 0) {
+                module.order = index + 1;
+            }
+            
+            // 保存模块类型信息到name字段，确保导入后可以识别
+            if (module.type === 'condition_end' || module.type === 'end_condition') {
+                module.name = '结束条件判断';
+            }
+        });
+        
+        // 为每个连接添加额外信息以确保导入后可以恢复
+        workflow.connections.forEach(conn => {
+            // 保存源模块和目标模块的类型信息
+            const sourceModule = workflow.modules.find(m => m.id === conn.source);
+            const targetModule = workflow.modules.find(m => m.id === conn.target);
+            
+            if (sourceModule) {
+                conn.sourceType = sourceModule.type;
+                conn.sourceName = sourceModule.name;
+                conn.sourceOrder = sourceModule.order;
+            }
+            
+            if (targetModule) {
+                conn.targetType = targetModule.type;
+                conn.targetName = targetModule.name;
+                conn.targetOrder = targetModule.order;
+            }
+        });
+        
+        // 更新变量列表
+        updateVariablesList();
+        
+        // 验证连接
+        let hasError = false;
+        const moduleIds = workflow.modules.map(m => m.id);
+        
+        // 检查所有连接的源和目标是否都存在
+        workflow.connections.forEach(conn => {
+            if (!moduleIds.includes(conn.source) || !moduleIds.includes(conn.target)) {
+                hasError = true;
+                showToast("发现无效连接，请检查工作流", "error");
+            }
+        });
+        
+        if (hasError) {
+            return;
+        }
+        
+        // 导出前确保基本格式正确
+        const workflowToSave = {
+            ...workflow,
+            _exportVersion: '2.0', // 添加导出版本标记，有助于后续导入识别
+            exportedAt: new Date().toISOString()
+        };
+        
+        // 发送保存请求
+        try {
+            const response = await fetch('/admin/workflow/save', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ workflow: workflowToSave })
+            });
+            
+            const data = await response.json();
+            
+            if (response.ok) {
+                showToast(data.message, "success");
+                // 无论是否是新工作流，都返回到dashboard
+                setTimeout(() => window.location.href = '/admin/dashboard', 1000);
+            } else {
+                showToast(data.message || "保存失败", "error");
+            }
+        } catch (error) {
+            showToast("请求出错", "error");
+            console.error(error);
+        }
+    }
+    
+    // 显示提示信息
+    function showToast(message, type = "info") {
+        // 创建提示元素
+        const toast = document.createElement('div');
+        toast.className = `fixed bottom-4 right-4 px-4 py-2 rounded-md text-white ${type === 'error' ? 'bg-red-500' : 'bg-green-500'} shadow-lg z-50`;
+        toast.innerHTML = message;
+        
+        // 添加到页面
+        document.body.appendChild(toast);
+        
+        // 自动隐藏
+        setTimeout(() => {
+            toast.remove();
+        }, 3000);
+    }
+    
+    // 更新开关状态的视觉效果
+    function updateToggleState(checkbox, isEnabled) {
+        // 更新checkbox的checked属性
+        checkbox.checked = isEnabled;
+        
+        // 注意：其余的样式通过CSS的:checked选择器自动应用
+        console.log("工作流启用状态:", isEnabled ? "已启用" : "未启用");
+    }
+    
+    // 创建模块DOM元素
+    function createModuleElement(moduleObj) {
+        // 检查模块是否已经在DOM中
+        if (document.getElementById(moduleObj.id)) {
+            return;
+        }
+        
+        // 创建模块元素
+        const moduleEl = document.createElement('div');
+        moduleEl.id = moduleObj.id;
+        moduleEl.className = 'module';
+        
+        // 设置模块位置
+        if (moduleObj.position) {
+            moduleEl.style.left = `${moduleObj.position.x}px`;
+            moduleEl.style.top = `${moduleObj.position.y}px`;
+        } else {
+            // 默认位置
+            moduleEl.style.left = '100px';
+            moduleEl.style.top = '100px';
+            
+            // 更新模块对象的位置
+            moduleObj.position = { x: 100, y: 100 };
+        }
+        
+        // 获取模块类型信息
+        const moduleTypeInfo = moduleTypes[moduleObj.type] || { name: moduleObj.name || '未知模块', icon: 'question-mark' };
+        
+        // 确定背景颜色和边框颜色
+        let bgColor = 'bg-white';
+        let borderColor = 'border-gray-200';
+        let headerBg = 'bg-gray-50';
+        
+        // 根据模块类型设置不同的样式
+        if (moduleObj.type === 'condition') {
+            bgColor = 'bg-blue-50';
+            borderColor = 'border-blue-200';
+            headerBg = 'bg-blue-100';
+        } else if (isEndConditionModule(moduleObj)) {
+            bgColor = 'bg-purple-50';
+            borderColor = 'border-purple-200';
+            headerBg = 'bg-purple-100';
+        } else if (moduleObj.type && moduleObj.type.includes('notification')) {
+            bgColor = 'bg-yellow-50';
+            borderColor = 'border-yellow-200';
+            headerBg = 'bg-yellow-100';
+        } else if (moduleObj.type === 'set_variable') {
+            bgColor = 'bg-green-50';
+            borderColor = 'border-green-200';
+            headerBg = 'bg-green-100';
+        }
+        
+        // 确定模块输出的变量名
+        let outputVariable = '';
+        if (moduleObj.config) {
+            if (moduleObj.type === 'set_variable' && moduleObj.config.variable_name) {
+                outputVariable = moduleObj.config.variable_name;
+            } else if (moduleObj.config.output_var) {
+                outputVariable = moduleObj.config.output_var;
+            } else if (moduleObj.config.result_var) {
+                outputVariable = moduleObj.config.result_var;
+            }
+        }
+        
+        // 创建模块内容
+        moduleEl.innerHTML = `
+            <div class="module-header ${headerBg} rounded-t-md">
+                <div class="flex items-center">
+                    <span class="module-order-badge flex items-center justify-center h-6 w-6 rounded-full bg-indigo-600 text-white text-xs font-medium">${moduleObj.order || 0}</span>
+                    <div class="flex items-center">
+                        <i class="fas fa-${moduleTypeInfo.icon || 'cog'} mr-2 text-gray-700"></i>
+                        <span class="font-medium text-gray-800">${moduleTypeInfo.name}</span>
+                    </div>
+                </div>
+                <div class="module-controls">
+                    <button type="button" onclick="removeModule('${moduleObj.id}')" class="text-gray-500 hover:text-red-500 focus:outline-none transition-colors duration-200">
+                        <i class="fas fa-trash-alt"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="module-content p-3 ${bgColor} rounded-b-md">
+                ${outputVariable ? 
+                    `<div class="text-sm font-medium text-indigo-600 flex items-center">
+                        <i class="fas fa-code-branch mr-1 text-xs"></i>
+                        <span>输出变量: ${outputVariable}</span>
+                    </div>` : 
+                    `<div class="text-sm text-gray-500">无输出变量</div>`
+                }
+            </div>
+        `;
+        
+        // 添加输入连接点
+        const inputPoint = document.createElement('div');
+        inputPoint.className = 'connection-point input';
+        inputPoint.title = '输入连接点';
+        inputPoint.setAttribute('data-module-id', moduleObj.id);
+        moduleEl.appendChild(inputPoint);
+        
+        // 监听输入连接点的点击
+        inputPoint.addEventListener('click', function(e) {
+            e.stopPropagation();
+            if (connectionStartModule) {
+                finishConnectionCreation(moduleObj.id);
+            } else {
+                // 不允许从输入点开始创建连接
+                showToast('连接必须从输出点开始创建', 'error');
+            }
+        });
+        
+        // 根据模块类型添加不同的输出连接点
+        if (moduleObj.type === 'condition') {
+            // 对于条件模块，添加真假两个分支输出点
+            const branchOutputs = document.createElement('div');
+            branchOutputs.className = 'branch-outputs';
+            moduleEl.appendChild(branchOutputs);
+            
+            const trueBranch = document.createElement('div');
+            trueBranch.className = 'branch-output';
+            trueBranch.setAttribute('data-module-id', moduleObj.id);
+            trueBranch.setAttribute('data-branch', 'true');
+            trueBranch.title = '条件成立分支';
+            branchOutputs.appendChild(trueBranch);
+            
+            const falseBranch = document.createElement('div');
+            falseBranch.className = 'branch-output';
+            falseBranch.setAttribute('data-module-id', moduleObj.id);
+            falseBranch.setAttribute('data-branch', 'false');
+            falseBranch.title = '条件不成立分支';
+            branchOutputs.appendChild(falseBranch);
+            
+            // 添加事件监听
+            trueBranch.addEventListener('click', function(e) {
+                e.stopPropagation();
+                if (connectionStartModule) {
+                    cancelConnectionCreation(); // 分支点不能作为终点
+                } else {
+                    startConnectionCreation(moduleObj.id, 'output', 'true');
+                }
+            });
+            
+            falseBranch.addEventListener('click', function(e) {
+                e.stopPropagation();
+                if (connectionStartModule) {
+                    cancelConnectionCreation(); // 分支点不能作为终点
+                } else {
+                    startConnectionCreation(moduleObj.id, 'output', 'false');
+                }
+            });
+        } else {
+            // 对于所有模块（包括结束条件判断模块），都添加输出连接点
+            const outputPoint = document.createElement('div');
+            outputPoint.className = 'connection-point output';
+            outputPoint.title = '输出连接点';
+            outputPoint.setAttribute('data-module-id', moduleObj.id);
+            moduleEl.appendChild(outputPoint);
+            
+            // 监听输出连接点的点击
+            outputPoint.addEventListener('click', function(e) {
+                e.stopPropagation();
+                if (connectionStartModule) {
+                    cancelConnectionCreation(); // 输出点不能作为终点
+                } else {
+                    startConnectionCreation(moduleObj.id, 'output');
+                }
+            });
+        }
+        
+        // 添加到画布
+        document.getElementById('workflow-canvas').appendChild(moduleEl);
+        
+        // 使模块可拖动
+        dragElement(moduleEl);
+        
+        // 点击选择模块
+        moduleEl.addEventListener('click', function(e) {
+            e.stopPropagation();
+            // 如果正在创建连接且点击了模块主体，将此模块作为连接终点
+            if (connectionStartModule && e.target.tagName !== 'BUTTON' && e.target.tagName !== 'I' &&
+                !e.target.classList.contains('connection-point') && 
+                !e.target.classList.contains('branch-output')) {
+                finishConnectionCreation(moduleObj.id);
+                return;
+            }
+            
+            // 正常选择模块
+            if (e.target.tagName !== 'BUTTON' && e.target.tagName !== 'I') {
+                selectModule(moduleObj.id);
+            }
+        });
+        
+        // 检查是否需要扩展画布
+        checkModulesPositionAndExtendCanvas();
+    }
+    
+    // 检查模块是否是结束条件判断模块的函数
+    function isEndConditionModule(module) {
+        // 考虑可能的所有类型值和名称的完整匹配
+        return module && (
+            module.type === 'end_condition' || 
+            module.type === 'condition_end' || 
+            module.type === 'end_condition_judgment' ||
+            module.name === '结束条件判断' ||
+            String(module.name).includes('结束条件') ||
+            String(module.name).includes('End Condition') ||
+            String(module.name).toLowerCase().includes('end condition') ||
+            (module.type === 'condition' && module.config && module.config.condition_type === 'end')
+        );
+    }
+    
+    // 初始化连接创建
+    function startConnectionCreation(moduleId, pointType, branch = null) {
+        // 检查是否是序号为1的模块的输入端点
+        const module = workflow.modules.find(m => m.id === moduleId);
+        if (pointType === 'input' && module && module.order === 1) {
+            showToast('你搁这玩人体蜈蚣呢', 'error');
+            return;
+        }
+        
+        // 只允许从输出点开始创建连接，不允许从输入点开始
+        if (pointType === 'input') {
+            showToast('连接必须从模块的输出点开始创建', 'error');
+            return;
+        }
+        
+        // 检查该输出点是否已经有连接
+        // 对于普通模块的输出点
+        if (!branch) {
+            const existingConnections = workflow.connections.filter(conn => 
+                conn.source === moduleId && !conn.sourceBranch
+            );
+            
+            // 如果已经有连接，检查是否有连接到结束条件判断模块之外的模块
+            if (existingConnections.length > 0) {
+                // 检查是否所有连接都是到结束条件判断模块
+                const nonEndConditionConnections = existingConnections.filter(conn => {
+                    const targetModule = workflow.modules.find(m => m.id === conn.target);
+                    return !isEndConditionModule(targetModule);
+                });
+                
+                if (nonEndConditionConnections.length > 0) {
+                    showToast('该输出点已有连接，请先删除现有连接', 'error');
+                    return;
+                }
+            }
+        } 
+        // 对于条件模块的分支输出点
+        else {
+            const existingBranchConnections = workflow.connections.filter(conn => 
+                conn.source === moduleId && conn.sourceBranch === branch
+            );
+            
+            if (existingBranchConnections.length > 0) {
+                // 检查是否所有连接都是到结束条件判断模块
+                const nonEndConditionConnections = existingBranchConnections.filter(conn => {
+                    const targetModule = workflow.modules.find(m => m.id === conn.target);
+                    return !isEndConditionModule(targetModule);
+                });
+                
+                if (nonEndConditionConnections.length > 0) {
+                    showToast(`该分支已有连接，请先删除现有连接`, 'error');
+                    return;
+                }
+            }
+        }
+        
+        connectionStartModule = moduleId;
+        connectionStartPoint = pointType;
+        connectionStartBranch = branch;
+        
+        // 高亮起始连接点
+        const sourceModule = document.getElementById(moduleId);
+        let startPoint;
+        
+        if (branch) {
+            startPoint = sourceModule.querySelector(`.branch-output[data-branch="${branch}"]`);
+        } else {
+            startPoint = sourceModule.querySelector('.connection-point.output');
+        }
+        
+        if (startPoint) {
+            startPoint.classList.add('active');
+        }
+        
+        // 创建临时连接线
+        const svgContainer = document.getElementById('connections-container');
+        tempConnectionPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        tempConnectionPath.setAttribute('class', 'connection-path temp-connection-path');
+        
+        // 设置颜色
+        if (branch === 'true') {
+            tempConnectionPath.style.stroke = '#10b981'; // 绿色
+        } else if (branch === 'false') {
+            tempConnectionPath.style.stroke = '#ef4444'; // 红色
+        }
+        
+        svgContainer.appendChild(tempConnectionPath);
+        
+        // 添加鼠标移动监听
+        document.addEventListener('mousemove', updateTempConnection);
+        
+        // 修改光标样式
+        document.getElementById('workflow-canvas').style.cursor = 'crosshair';
+    }
+    
+    // 更新临时连接线位置
+    function updateTempConnection(e) {
+        if (!connectionStartModule || !tempConnectionPath) return;
+        
+        const sourceModule = document.getElementById(connectionStartModule);
+        if (!sourceModule) {
+            cancelConnectionCreation();
+            return;
+        }
+        
+        // 获取起始连接点位置
+        let startX, startY;
+        
+        if (connectionStartBranch) {
+            const branchPoint = sourceModule.querySelector(`.branch-output[data-branch="${connectionStartBranch}"]`);
+            if (branchPoint) {
+                const rect = branchPoint.getBoundingClientRect();
+                startX = rect.left + rect.width / 2;
+                startY = rect.top + rect.height / 2;
+            }
+        } else {
+            const outputPoint = sourceModule.querySelector('.connection-point.output');
+            if (outputPoint) {
+                const rect = outputPoint.getBoundingClientRect();
+                startX = rect.left + rect.width / 2;
+                startY = rect.top + rect.height / 2;
+            }
+        }
+        
+        if (!startX || !startY) {
+            cancelConnectionCreation();
+            return;
+        }
+        
+        // 获取Canvas位置和滚动偏移
+        const canvas = document.getElementById('workflow-canvas');
+        const canvasRect = canvas.getBoundingClientRect();
+        
+        // 调整坐标，考虑Canvas的滚动位置
+        startX = startX - canvasRect.left + canvas.scrollLeft;
+        startY = startY - canvasRect.top + canvas.scrollTop;
+        
+        // 鼠标位置
+        const endX = e.clientX - canvasRect.left + canvas.scrollLeft;
+        const endY = e.clientY - canvasRect.top + canvas.scrollTop;
+        
+        // 生成贝塞尔曲线路径
+        const controlPointOffset = 50;
+        const pathData = `M ${startX} ${startY} C ${startX} ${startY + controlPointOffset}, ${endX} ${endY - controlPointOffset}, ${endX} ${endY}`;
+        
+        tempConnectionPath.setAttribute('d', pathData);
+    }
+    
+    // 取消连接创建
+    function cancelConnectionCreation() {
+        // 移除所有活动的连接点高亮
+        document.querySelectorAll('.connection-point.active, .branch-output.active').forEach(el => {
+            el.classList.remove('active');
+        });
+        
+        // 移除临时连接线
+        if (tempConnectionPath) {
+            tempConnectionPath.remove();
+            tempConnectionPath = null;
+        }
+        
+        // 移除鼠标移动监听
+        document.removeEventListener('mousemove', updateTempConnection);
+        
+        // 重置连接变量
+        connectionStartModule = null;
+        connectionStartPoint = null;
+        connectionStartBranch = null;
+        
+        // 恢复光标样式
+        document.getElementById('workflow-canvas').style.cursor = 'default';
+    }
+    
+    // 完成连接创建
+    function finishConnectionCreation(targetModuleId) {
+        if (!connectionStartModule || !targetModuleId) {
+            cancelConnectionCreation();
+            return;
+        }
+        
+        // 不允许连接到自己
+        if (connectionStartModule === targetModuleId) {
+            showToast('不能连接模块到自身', 'error');
+            cancelConnectionCreation();
+            return;
+        }
+        
+        const targetModule = document.getElementById(targetModuleId);
+        if (!targetModule) {
+            cancelConnectionCreation();
+            return;
+        }
+        
+        // 检查目标模块是否是序号为1的模块
+        const targetModuleObj = workflow.modules.find(m => m.id === targetModuleId);
+        if (targetModuleObj && targetModuleObj.order === 1) {
+            showToast('你搁这玩人体蜈蚣呢', 'error');
+            cancelConnectionCreation();
+            return;
+        }
+        
+        // 获取源模块对象
+        const sourceModuleObj = workflow.modules.find(m => m.id === connectionStartModule);
+        
+        // 检查连接方向是否正确
+        // 只允许从一个模块的输出点连接到另一个模块的输入点
+        if (connectionStartPoint !== 'output' && !connectionStartBranch) {
+            showToast('只能从模块的输出连接到其他模块的输入', 'error');
+            cancelConnectionCreation();
+            return;
+        }
+        
+        // 检查目标模块是否已经有输入连接（除了结束条件判断可以有多个输入外）
+        const isTargetEndCondition = isEndConditionModule(targetModuleObj);
+        if (!isTargetEndCondition) {
+            const existingTargetConnections = workflow.connections.filter(conn => 
+                conn.target === targetModuleId
+            );
+            
+            if (existingTargetConnections.length > 0) {
+                showToast('目标模块已有输入连接，一个普通模块只能有一个输入连接', 'error');
+                cancelConnectionCreation();
+                return;
+            }
+        }
+        
+        // 检查源模块是否是结束条件判断模块
+        const isSourceEndCondition = isEndConditionModule(sourceModuleObj);
+        
+        // 对于非条件分支的普通连接
+        if (!connectionStartBranch) {
+            // 如果源模块是普通模块（非结束条件判断和非条件判断）
+            if (!isSourceEndCondition) {
+                const existingSourceConnections = workflow.connections.filter(conn => 
+                    conn.source === connectionStartModule && 
+                    !conn.sourceBranch
+                );
+                
+                // 检查是否已经有输出连接到非结束条件判断模块
+                if (existingSourceConnections.length > 0) {
+                    // 检查现有连接是否有连到非结束条件判断模块的
+                    const nonEndConditionConnections = existingSourceConnections.filter(conn => {
+                        const connTargetModule = workflow.modules.find(m => m.id === conn.target);
+                        return !isEndConditionModule(connTargetModule);
+                    });
+                    
+                    if (nonEndConditionConnections.length > 0 && !isTargetEndCondition) {
+                        showToast('该输出点已有连接到其他普通模块，请先删除现有连接', 'error');
+                        cancelConnectionCreation();
+                        return;
+                    }
+                }
+            }
+            // 对于结束条件判断模块，允许连接到其他模块
+        } 
+        // 如果是条件模块的分支，检查每个分支是否已经有连接到普通模块
+        else {
+            const existingBranchConnections = workflow.connections.filter(conn => 
+                conn.source === connectionStartModule && 
+                conn.sourceBranch === connectionStartBranch
+            );
+            
+            if (existingBranchConnections.length > 0) {
+                // 检查是否已经连接到非结束条件判断模块
+                const nonEndConditionConnections = existingBranchConnections.filter(conn => {
+                    const connTargetModule = workflow.modules.find(m => m.id === conn.target);
+                    return !isEndConditionModule(connTargetModule);
+                });
+                
+                if (nonEndConditionConnections.length > 0 && !isTargetEndCondition) {
+                    showToast(`该分支已有连接到普通模块，请先删除现有连接`, 'error');
+                    cancelConnectionCreation();
+                    return;
+                }
+            }
+        }
+        
+        // 检查是否已存在相同的连接
+        const existingConnection = workflow.connections.find(conn => 
+            conn.source === connectionStartModule && 
+            conn.target === targetModuleId && 
+            conn.sourceBranch === connectionStartBranch
+        );
+        
+        if (existingConnection) {
+            showToast('连接已存在', 'error');
+            cancelConnectionCreation();
+            return;
+        }
+        
+        // 创建新连接
+        const newConnection = {
+            id: `conn-${Date.now()}`,
+            source: connectionStartModule,
+            target: targetModuleId,
+            sourceType: sourceModuleObj?.type,
+            targetType: targetModuleObj?.type,
+            sourceName: sourceModuleObj?.name,
+            targetName: targetModuleObj?.name,
+            sourceOrder: sourceModuleObj?.order,
+            targetOrder: targetModuleObj?.order,
+            sourceBranch: connectionStartBranch,
+            sourceHandle: connectionStartBranch ? `output_${connectionStartBranch}` : 'output',
+            targetHandle: 'input'
+        };
+        
+        // 添加到工作流
+        workflow.connections.push(newConnection);
+        
+        // 更新连接线视图
+        updateConnections();
+        
+        // 取消连接创建模式
+        cancelConnectionCreation();
+        
+        // 提示成功
+        showToast('连接已创建', 'success');
+    }
+    
+    // 更新连接线
+    function updateConnections() {
+        // 获取SVG容器
+        const svgContainer = document.getElementById('connections-container');
+        
+        // 清空容器
+        svgContainer.innerHTML = '';
+        
+        // 重新添加箭头定义
+        const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+        const marker = document.createElementNS('http://www.w3.org/2000/svg', 'marker');
+        marker.setAttribute('id', 'arrow');
+        marker.setAttribute('viewBox', '0 0 10 10');
+        marker.setAttribute('refX', '5');
+        marker.setAttribute('refY', '5');
+        marker.setAttribute('markerWidth', '6');
+        marker.setAttribute('markerHeight', '6');
+        marker.setAttribute('orient', 'auto-start-reverse');
+        
+        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        path.setAttribute('d', 'M 0 0 L 10 5 L 0 10 z');
+        path.setAttribute('class', 'arrow-head');
+        
+        marker.appendChild(path);
+        defs.appendChild(marker);
+        svgContainer.appendChild(defs);
+        
+        // 绘制所有连接
+        workflow.connections.forEach(connection => {
+            drawConnection(connection, svgContainer);
+        });
+    }
+    
+    // 绘制单个连接
+    function drawConnection(connection, svgContainer) {
+        const sourceModule = document.getElementById(connection.source);
+        const targetModule = document.getElementById(connection.target);
+        
+        // 如果源或目标模块不存在，不绘制
+        if (!sourceModule || !targetModule) {
+            console.log("无法绘制连接，模块不存在:", connection.id, connection.source, connection.target);
+            return;
+        }
+        
+        // 获取源模块的输出点和目标模块的输入点
+        let sourcePoint, targetPoint;
+        
+        // 对于条件分支
+        if (connection.sourceBranch === 'true' || connection.type === 'condition_true') {
+            sourcePoint = sourceModule.querySelector('.branch-output[data-branch="true"]');
+        } else if (connection.sourceBranch === 'false' || connection.type === 'condition_false') {
+            sourcePoint = sourceModule.querySelector('.branch-output[data-branch="false"]');
+        } else {
+            sourcePoint = sourceModule.querySelector('.connection-point.output');
+        }
+        
+        targetPoint = targetModule.querySelector('.connection-point.input');
+        
+        // 如果连接点不存在，不绘制
+        if (!sourcePoint || !targetPoint) {
+            console.log("无法绘制连接，连接点不存在:", connection.id);
+            if (!sourcePoint) console.log("源连接点缺失, 源模块类型:", connection.sourceType);
+            if (!targetPoint) console.log("目标连接点缺失, 目标模块类型:", connection.targetType);
+            return;
+        }
+        
+        // 获取连接点在页面中的位置
+        const sourceRect = sourcePoint.getBoundingClientRect();
+        const targetRect = targetPoint.getBoundingClientRect();
+        
+        // 获取画布位置和滚动偏移
+        const canvas = document.getElementById('workflow-canvas');
+        const canvasRect = canvas.getBoundingClientRect();
+        
+        // 调整坐标，考虑画布的滚动位置
+        const startX = sourceRect.left + sourceRect.width / 2 - canvasRect.left + canvas.scrollLeft;
+        const startY = sourceRect.top + sourceRect.height / 2 - canvasRect.top + canvas.scrollTop;
+        const endX = targetRect.left + targetRect.width / 2 - canvasRect.left + canvas.scrollLeft;
+        const endY = targetRect.top + targetRect.height / 2 - canvasRect.top + canvas.scrollTop;
+        
+        // 创建SVG路径
+        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        path.setAttribute('class', 'connection-path');
+        path.setAttribute('id', connection.id || `conn-${connection.source}-${connection.target}`);
+        
+        // 设置连接线颜色，条件分支使用不同颜色
+        if (connection.sourceBranch === 'true' || connection.type === 'condition_true') {
+            path.style.stroke = '#10b981'; // 绿色，表示条件为真
+        } else if (connection.sourceBranch === 'false' || connection.type === 'condition_false') {
+            path.style.stroke = '#ef4444'; // 红色，表示条件为假
+        }
+        
+        // 计算控制点，使连接线呈现贝塞尔曲线
+        const dx = endX - startX;
+        const dy = endY - startY;
+        const controlPointOffset = Math.min(Math.abs(dx) * 0.5, 100);
+        
+        // 生成贝塞尔曲线路径
+        const isConditionBranch = connection.sourceBranch === 'true' || connection.sourceBranch === 'false' || 
+                                connection.type === 'condition_true' || connection.type === 'condition_false';
+        const pathData = `M ${startX} ${startY} C ${startX + controlPointOffset * (isConditionBranch ? 0.5 : 0)} ${startY + controlPointOffset}, ${endX - controlPointOffset} ${endY - controlPointOffset}, ${endX} ${endY}`;
+        path.setAttribute('d', pathData);
+        
+        // 添加到SVG容器
+        svgContainer.appendChild(path);
+        
+        // 创建连接线上的箭头
+        const arrowSize = 6;
+        const arrow = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+        arrow.setAttribute('class', 'connection-arrow');
+        
+        // 计算箭头方向
+        const angle = Math.atan2(endY - startY, endX - startX);
+        const arrowPoints = [
+            endX - arrowSize * Math.cos(angle) - arrowSize * Math.sin(angle - Math.PI/2),
+            endY - arrowSize * Math.sin(angle) + arrowSize * Math.cos(angle - Math.PI/2),
+            endX,
+            endY,
+            endX - arrowSize * Math.cos(angle) - arrowSize * Math.sin(angle + Math.PI/2),
+            endY - arrowSize * Math.sin(angle) + arrowSize * Math.cos(angle + Math.PI/2)
+        ].join(',');
+        
+        arrow.setAttribute('points', arrowPoints);
+        
+        // 设置箭头颜色与线条一致
+        if (connection.sourceBranch === 'true' || connection.type === 'condition_true') {
+            arrow.style.fill = '#10b981';
+        } else if (connection.sourceBranch === 'false' || connection.type === 'condition_false') {
+            arrow.style.fill = '#ef4444';
+        }
+        
+        // 添加箭头到SVG容器
+        svgContainer.appendChild(arrow);
+    }
+
+    // 初始化变量列表
+    function initVariablesList() {
+        // 收集所有模块中定义的变量
+        collectVariables();
+        
+        // 渲染变量列表
+        renderVariablesList();
+    }
+    
+    // 收集工作流中的所有变量
+    function collectVariables() {
+        workflowVariables = [];
+        
+        workflow.modules.forEach(module => {
+            if (!module.config) return;
+            
+            // 检查各种可能的变量字段
+            const variableFields = [
+                'variable_name', 'output_var', 'result_var', 
+                'output_variable', 'variable', 'data_variable'
+            ];
+            
+            variableFields.forEach(field => {
+                if (module.config[field] && module.config[field].trim() !== '') {
+                    // 检查变量是否已存在于列表中
+                    if (!workflowVariables.includes(module.config[field])) {
+                        workflowVariables.push(module.config[field]);
+                    }
+                }
+            });
+            
+            // 检查有些模块可能在JSON中存储变量
+            if (module.config.variables && typeof module.config.variables === 'string') {
+                try {
+                    const vars = JSON.parse(module.config.variables);
+                    if (Array.isArray(vars)) {
+                        vars.forEach(v => {
+                            if (v && !workflowVariables.includes(v)) {
+                                workflowVariables.push(v);
+                            }
+                        });
+                    } else if (typeof vars === 'object') {
+                        Object.keys(vars).forEach(key => {
+                            if (!workflowVariables.includes(key)) {
+                                workflowVariables.push(key);
+                            }
+                        });
+                    }
+                } catch (e) {
+                    // 解析JSON失败，忽略
+                }
+            }
+        });
+        
+        // 按字母顺序排序变量
+        workflowVariables.sort();
+        
+        console.log('工作流变量列表已更新:', workflowVariables);
+    }
+    
+    // 渲染变量列表
+    function renderVariablesList() {
+        const variablesList = document.getElementById('variables-list');
+        if (!variablesList) return;
+        
+        if (workflowVariables.length === 0) {
+            variablesList.innerHTML = '<span class="text-gray-500 text-xs">暂无变量</span>';
+            return;
+        }
+        
+        variablesList.innerHTML = '';
+        
+        workflowVariables.forEach(variable => {
+            const variableItem = document.createElement('span');
+            variableItem.className = 'text-xs bg-indigo-100 text-indigo-800 px-2 py-1 rounded cursor-pointer hover:bg-indigo-200 transition-colors duration-200';
+            variableItem.textContent = variable;
+            variableItem.title = '点击复制变量名';
+            
+            // 添加点击复制功能
+            variableItem.addEventListener('click', function() {
+                // 添加方括号格式化变量名
+                const formattedVariable = `[${variable}]`;
+                
+                navigator.clipboard.writeText(formattedVariable)
+                    .then(() => {
+                        // 显示复制成功的效果
+                        variableItem.classList.add('bg-green-100', 'text-green-800');
+                        setTimeout(() => {
+                            variableItem.classList.remove('bg-green-100', 'text-green-800');
+                        }, 1000);
+                        
+                        showToast(`已复制: ${formattedVariable}`, 'success');
+                    })
+                    .catch(err => {
+                        console.error('复制失败:', err);
+                        showToast('复制失败，请手动复制', 'error');
+                    });
+            });
+            
+            variablesList.appendChild(variableItem);
+        });
+    }
+    
+    // 更新变量列表
+    function updateVariablesList() {
+        collectVariables();
+        renderVariablesList();
+    }
+
+    // 处理导入的工作流，修复可能的连接问题
+    function processImportedWorkflow() {
+        // 如果连接数组不存在，初始化它
+        if (!workflow.connections) {
+            workflow.connections = [];
+            return;
+        }
+        
+        // 确保所有连接都有正确的类型信息
+        workflow.connections.forEach(conn => {
+            // 查找源模块和目标模块
+            const sourceModule = workflow.modules.find(m => m.id === conn.source);
+            const targetModule = workflow.modules.find(m => m.id === conn.target);
+            
+            if (sourceModule && !conn.sourceType) {
+                conn.sourceType = sourceModule.type;
+                conn.sourceName = sourceModule.name;
+                conn.sourceOrder = sourceModule.order;
+            }
+            
+            if (targetModule && !conn.targetType) {
+                conn.targetType = targetModule.type;
+                conn.targetName = targetModule.name;
+                conn.targetOrder = targetModule.order;
+            }
+            
+            // 确保有正确的handle信息
+            if (!conn.sourceHandle) {
+                conn.sourceHandle = conn.sourceBranch ? `output_${conn.sourceBranch}` : 'output';
+            }
+            
+            if (!conn.targetHandle) {
+                conn.targetHandle = 'input';
+            }
+        });
+        
+        // 过滤无效的连接（源或目标模块不存在）
+        workflow.connections = workflow.connections.filter(conn => {
+            const sourceExists = workflow.modules.some(m => m.id === conn.source);
+            const targetExists = workflow.modules.some(m => m.id === conn.target);
+            return sourceExists && targetExists;
+        });
+        
+        // 特殊处理结束条件判断模块的连接
+        workflow.connections.forEach(conn => {
+            const targetModule = workflow.modules.find(m => m.id === conn.target);
+            
+            // 如果连接的目标是结束条件判断模块，保留该连接即使源模块已经有其他输出
+            if (targetModule && isEndConditionModule(targetModule)) {
+                // 这些连接是允许的，不需要额外处理
+                console.log('检测到与结束条件判断模块的连接:', conn.id);
+            }
+        });
+        
+        console.log('导入工作流连接处理完成，总连接数:', workflow.connections.length);
+    }
+</script>
+{% endblock %} 

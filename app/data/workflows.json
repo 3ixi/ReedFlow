@@ -1,0 +1,463 @@
+[
+  {
+    "connections": [
+      {
+        "id": "conn-1743473574595",
+        "source": "module_1743473501759_t2zvuw6s8",
+        "target": "module_1743473571736_qkyuktksa",
+        "sourceType": "check_domains",
+        "targetType": "account_config",
+        "sourceName": "检查域名",
+        "targetName": "账号配置",
+        "sourceOrder": 1,
+        "targetOrder": 2,
+        "sourceBranch": null,
+        "sourceHandle": "output",
+        "targetHandle": "input"
+      },
+      {
+        "id": "conn-1743473618062",
+        "source": "module_1743473571736_qkyuktksa",
+        "target": "module_1743473612870_6kjpfvlwt",
+        "sourceType": "account_config",
+        "targetType": "account_config",
+        "sourceName": "账号配置",
+        "targetName": "账号配置",
+        "sourceOrder": 2,
+        "targetOrder": 3,
+        "sourceBranch": null,
+        "sourceHandle": "output",
+        "targetHandle": "input"
+      },
+      {
+        "id": "conn-1743473668546",
+        "source": "module_1743473612870_6kjpfvlwt",
+        "target": "module_1743473661690_k5hlw29yd",
+        "sourceType": "account_config",
+        "targetType": "http_request",
+        "sourceName": "账号配置",
+        "targetName": "请求URL",
+        "sourceOrder": 3,
+        "targetOrder": 4,
+        "sourceBranch": null,
+        "sourceHandle": "output",
+        "targetHandle": "input"
+      },
+      {
+        "id": "conn-1743473905369",
+        "source": "module_1743473661690_k5hlw29yd",
+        "target": "module_1743473903790_pi2vsso38",
+        "sourceType": "http_request",
+        "targetType": "condition",
+        "sourceName": "请求URL",
+        "targetName": "条件判断",
+        "sourceOrder": 4,
+        "targetOrder": 5,
+        "sourceBranch": null,
+        "sourceHandle": "output",
+        "targetHandle": "input"
+      },
+      {
+        "id": "conn-1743473949951",
+        "source": "module_1743473903790_pi2vsso38",
+        "target": "module_1743473938237_47oryhs2y",
+        "sourceType": "condition",
+        "targetType": "http_request",
+        "sourceName": "条件判断",
+        "targetName": "请求URL",
+        "sourceOrder": 5,
+        "targetOrder": 6,
+        "sourceBranch": "true",
+        "sourceHandle": "output_true",
+        "targetHandle": "input"
+      },
+      {
+        "id": "conn-1743474179837",
+        "source": "module_1743473903790_pi2vsso38",
+        "target": "module_1743474171362_2zuas7hm3",
+        "sourceType": "condition",
+        "targetType": "notification",
+        "sourceName": "条件判断",
+        "targetName": "通知服务",
+        "sourceOrder": 5,
+        "targetOrder": 7,
+        "sourceBranch": "false",
+        "sourceHandle": "output_false",
+        "targetHandle": "input"
+      },
+      {
+        "id": "conn-1743474241611",
+        "source": "module_1743473938237_47oryhs2y",
+        "target": "module_1743474237253_0lz4j6aen",
+        "sourceType": "http_request",
+        "targetType": "condition",
+        "sourceName": "请求URL",
+        "targetName": "条件判断",
+        "sourceOrder": 6,
+        "targetOrder": 8,
+        "sourceBranch": null,
+        "sourceHandle": "output",
+        "targetHandle": "input"
+      },
+      {
+        "id": "conn-1743474269867",
+        "source": "module_1743474237253_0lz4j6aen",
+        "target": "module_1743474263759_hb0u692nn",
+        "sourceType": "condition",
+        "targetType": "notification",
+        "sourceName": "条件判断",
+        "targetName": "通知服务",
+        "sourceOrder": 8,
+        "targetOrder": 9,
+        "sourceBranch": "true",
+        "sourceHandle": "output_true",
+        "targetHandle": "input"
+      },
+      {
+        "id": "conn-1743474339643",
+        "source": "module_1743474237253_0lz4j6aen",
+        "target": "module_1743474329195_bxh5m1aox",
+        "sourceType": "condition",
+        "targetType": "json_parse",
+        "sourceName": "条件判断",
+        "targetName": "解析JSON",
+        "sourceOrder": 8,
+        "targetOrder": 10,
+        "sourceBranch": "false",
+        "sourceHandle": "output_false",
+        "targetHandle": "input"
+      },
+      {
+        "id": "conn-1743474393471",
+        "source": "module_1743474329195_bxh5m1aox",
+        "target": "module_1743474387797_o6h4pair6",
+        "sourceType": "json_parse",
+        "targetType": "notification",
+        "sourceName": "解析JSON",
+        "targetName": "通知服务",
+        "sourceOrder": 10,
+        "targetOrder": 11,
+        "sourceBranch": null,
+        "sourceHandle": "output",
+        "targetHandle": "input"
+      },
+      {
+        "id": "conn-1743474426359",
+        "source": "module_1743474263759_hb0u692nn",
+        "target": "module_1743474420641_um8jlnxij",
+        "sourceType": "notification",
+        "targetType": "condition_end",
+        "sourceName": "通知服务",
+        "targetName": "结束条件判断",
+        "sourceOrder": 9,
+        "targetOrder": 12,
+        "sourceBranch": null,
+        "sourceHandle": "output",
+        "targetHandle": "input"
+      },
+      {
+        "id": "conn-1743474428232",
+        "source": "module_1743474387797_o6h4pair6",
+        "target": "module_1743474420641_um8jlnxij",
+        "sourceType": "notification",
+        "targetType": "condition_end",
+        "sourceName": "通知服务",
+        "targetName": "结束条件判断",
+        "sourceOrder": 11,
+        "targetOrder": 12,
+        "sourceBranch": null,
+        "sourceHandle": "output",
+        "targetHandle": "input"
+      },
+      {
+        "id": "conn-1743474440785",
+        "source": "module_1743474420641_um8jlnxij",
+        "target": "module_1743474435508_odgzedzee",
+        "sourceType": "condition_end",
+        "targetType": "condition_end",
+        "sourceName": "结束条件判断",
+        "targetName": "结束条件判断",
+        "sourceOrder": 12,
+        "targetOrder": 13,
+        "sourceBranch": null,
+        "sourceHandle": "output",
+        "targetHandle": "input"
+      },
+      {
+        "id": "conn-1743474444074",
+        "source": "module_1743474171362_2zuas7hm3",
+        "target": "module_1743474435508_odgzedzee",
+        "sourceType": "notification",
+        "targetType": "condition_end",
+        "sourceName": "通知服务",
+        "targetName": "结束条件判断",
+        "sourceOrder": 7,
+        "targetOrder": 13,
+        "sourceBranch": null,
+        "sourceHandle": "output",
+        "targetHandle": "input"
+      },
+      {
+        "id": "conn-1743474465814",
+        "source": "module_1743474435508_odgzedzee",
+        "target": "module_1743474456067_tsvnzlvck",
+        "sourceType": "condition_end",
+        "targetType": "notification",
+        "sourceName": "结束条件判断",
+        "targetName": "通知服务",
+        "sourceOrder": 13,
+        "targetOrder": 14,
+        "sourceBranch": null,
+        "sourceHandle": "output",
+        "targetHandle": "input"
+      }
+    ],
+    "description": "示例工作流",
+    "id": "58dcb2e6-3e56-4522-a551-2813d0b06757",
+    "modules": [
+      {
+        "id": "module_1743473501759_t2zvuw6s8",
+        "type": "check_domains",
+        "name": "检查域名",
+        "config": {
+          "domains": "ikuuu.org\nikuuu.one\nikuuu.top",
+          "port": "80",
+          "timeout": "5",
+          "output_var": "ok_domain",
+          "all_results_var": ""
+        },
+        "position": {
+          "x": 291,
+          "y": 31
+        },
+        "order": 1,
+        "subOrder": null
+      },
+      {
+        "id": "module_1743473571736_qkyuktksa",
+        "type": "account_config",
+        "name": "账号配置",
+        "config": {
+          "action": "读取",
+          "category": "静态Token",
+          "service": "iKuuu",
+          "account_name": "爱坤机场账密",
+          "field": "用户名",
+          "value": "",
+          "output_var": "ikuuu_email"
+        },
+        "position": {
+          "x": 292,
+          "y": 173
+        },
+        "order": 2,
+        "subOrder": null
+      },
+      {
+        "id": "module_1743473612870_6kjpfvlwt",
+        "type": "account_config",
+        "name": "账号配置",
+        "config": {
+          "action": "读取",
+          "category": "静态Token",
+          "service": "iKuuu",
+          "account_name": "爱坤机场账密",
+          "field": "密码",
+          "value": "",
+          "output_var": "ikuuu_passwd"
+        },
+        "position": {
+          "x": 294,
+          "y": 307
+        },
+        "order": 3,
+        "subOrder": null
+      },
+      {
+        "id": "module_1743473661690_k5hlw29yd",
+        "type": "http_request",
+        "name": "请求URL",
+        "config": {
+          "url": "https://[ok_domain]/auth/login",
+          "method": "POST",
+          "headers": "{user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 Safari/537.36}",
+          "body": "{'email': [ikuuu_email],'passwd': [ikuuu_passwd]}",
+          "timeout": "10",
+          "use_http2": false,
+          "check_status": true,
+          "output_var": "",
+          "status_code_var": "login_status"
+        },
+        "position": {
+          "x": 292,
+          "y": 435
+        },
+        "order": 4,
+        "subOrder": null
+      },
+      {
+        "id": "module_1743473903790_pi2vsso38",
+        "type": "condition",
+        "name": "条件判断",
+        "config": {},
+        "position": {
+          "x": 285,
+          "y": 569
+        },
+        "order": 5,
+        "subOrder": null
+      },
+      {
+        "id": "module_1743473938237_47oryhs2y",
+        "type": "http_request",
+        "name": "请求URL",
+        "config": {
+          "url": "https://[ok_domain]/user/checkin",
+          "method": "POST",
+          "headers": "{user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 Safari/537.36}",
+          "body": "",
+          "timeout": "10",
+          "use_http2": false,
+          "check_status": true,
+          "output_var": "check_response",
+          "status_code_var": "check_status"
+        },
+        "position": {
+          "x": 174,
+          "y": 741
+        },
+        "order": 6,
+        "subOrder": "5.16"
+      },
+      {
+        "id": "module_1743474171362_2zuas7hm3",
+        "type": "notification",
+        "name": "通知服务",
+        "config": {
+          "type": "email",
+          "title": "iKuuu签到失败",
+          "content": "账号[ikuuu_email]登录失败",
+          "to": "10001@qq.com"
+        },
+        "position": {
+          "x": 421,
+          "y": 732
+        },
+        "order": 7,
+        "subOrder": "5.27"
+      },
+      {
+        "id": "module_1743474237253_0lz4j6aen",
+        "type": "condition",
+        "name": "条件判断",
+        "config": {},
+        "position": {
+          "x": 152,
+          "y": 906
+        },
+        "order": 8,
+        "subOrder": "5.18"
+      },
+      {
+        "id": "module_1743474263759_hb0u692nn",
+        "type": "notification",
+        "name": "通知服务",
+        "config": {
+          "type": "email",
+          "title": "iKuuu签到成功",
+          "content": "账号[ikuuu_email]签到成功",
+          "to": "10001@qq.com"
+        },
+        "position": {
+          "x": 52,
+          "y": 1067
+        },
+        "order": 9,
+        "subOrder": "8.19"
+      },
+      {
+        "id": "module_1743474329195_bxh5m1aox",
+        "type": "json_parse",
+        "name": "解析JSON",
+        "config": {
+          "input": "[check_response]",
+          "path": "msg",
+          "output_var": "check_msg"
+        },
+        "position": {
+          "x": 288,
+          "y": 1067
+        },
+        "order": 10,
+        "subOrder": "8.210"
+      },
+      {
+        "id": "module_1743474387797_o6h4pair6",
+        "type": "notification",
+        "name": "通知服务",
+        "config": {
+          "type": "email",
+          "title": "iKuuu签到失败",
+          "content": "账号[ikuuu_email]签到失败，原因：[check_msg]",
+          "to": "10001@qq.com"
+        },
+        "position": {
+          "x": 286,
+          "y": 1211
+        },
+        "order": 11,
+        "subOrder": "8.211"
+      },
+      {
+        "id": "module_1743474420641_um8jlnxij",
+        "type": "condition_end",
+        "name": "结束条件判断",
+        "config": {},
+        "position": {
+          "x": 184,
+          "y": 1358
+        },
+        "order": 12,
+        "subOrder": "8.112"
+      },
+      {
+        "id": "module_1743474435508_odgzedzee",
+        "type": "condition_end",
+        "name": "结束条件判断",
+        "config": {},
+        "position": {
+          "x": 448,
+          "y": 1515
+        },
+        "order": 13,
+        "subOrder": "8.113"
+      },
+      {
+        "id": "module_1743474456067_tsvnzlvck",
+        "type": "notification",
+        "name": "通知服务",
+        "config": {
+          "type": "email",
+          "title": "iKuuu签到完成",
+          "content": "iKuuu工作流执行完毕",
+          "to": "10001@qq.com"
+        },
+        "position": {
+          "x": 305,
+          "y": 1698
+        },
+        "order": 14,
+        "subOrder": "8.114"
+      }
+    ],
+    "name": "iKuuu签到",
+    "cron": "*/10 * * * *",
+    "enabled": false,
+    "_exportVersion": "2.0",
+    "exportedAt": "2025-04-01T02:30:18.148Z",
+    "updated_at": "2025-04-01T10:31:21.364106",
+    "created_at": "2025-04-01T10:30:18.153174",
+    "last_run": "2025-04-01 10:31:21",
+    "last_result": "执行出错: '<' not supported between instances of 'str' and 'int'"
+  }
+]

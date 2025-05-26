@@ -20,6 +20,17 @@ ReedFlow是一个基于Python+FastAPI的自动化工作流管理系统，用户�
 - 前端：Tailwind CSS, JavaScript
 - 数据存储：JSON文件（无需数据库）
 
+## 运行截图
+![Image 1](https://y.gtimg.cn/music/photo_new/T053M000001br9iT0zaaiz.png)
+![Image 2](https://y.gtimg.cn/music/photo_new/T053M000003nJGLb49rPlW.png)
+![Image 3](https://y.gtimg.cn/music/photo_new/T053M000004QAGar2YmF48.png)
+![Image 4](https://y.gtimg.cn/music/photo_new/T053M0000030VhgH0PXyoo.png)
+![Image 5](https://y.gtimg.cn/music/photo_new/T053M0000035dq9Z1VAGnu.png)
+![Image 6](https://y.gtimg.cn/music/photo_new/T053M000001T7dAT1Ilca9.png)
+![Image 7](https://y.gtimg.cn/music/photo_new/T053M000001ZQfkR3xPJZr.png)
+- 支持嵌套条件判断模块（嵌套if），可以应对大多数脚本操作：
+![Image 8](https://y.gtimg.cn/music/photo_new/T053M000002LbCKx45hhno.png)
+
 ## 安装与运行
 
 ### 环境要求
@@ -62,4 +73,4 @@ python run.py
 
 ## 特别说明
 
-- 由于个人精力原因，部分模块功能没有开发完整，可能会出现报错，后续暂无修复计划，可以在`execute_module`函数中修改逻辑
+- 由于个人精力原因，部分模块功能没有开发完整，可能会出现报错，后续缓慢更新
